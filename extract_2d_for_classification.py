@@ -319,16 +319,16 @@ def main():
             new_rot, new_tilt, new_psi: New ZYZ Euler angles in degrees, wrapped to [-180, 180]
         """
         # Create the original ZYZ rotation
-        rot_original = R.from_euler('ZYZ', [rot, tilt, psi], degrees=True)
+        rot_original = R.from_euler('zyz', [psi, tilt, rot], degrees=True)
         
-        # Rotation that takes X-axis to Z-axis: -90° around Y
-        rot_y_minus90 = R.from_euler('Y', -90, degrees=True)
+        # Rotation that takes Y-axis to Z-axis: -90° around Y
+        rot_x_minus90 = R.from_euler('x', -90, degrees=True)
         
         # Compose: R_new = R_y(-90) * R_original
-        rot_new = rot_y_minus90 * rot_original
+        rot_new = rot_x_minus90 * rot_original
         
         # Extract new ZYZ angles (scipy returns rot,psi in [-180,180], tilt in [0,180])
-        new_rot, new_tilt, new_psi = rot_new.as_euler('ZYZ', degrees=True)
+        new_psi, new_tilt, new_rot = rot_new.as_euler('zyz', degrees=True)
                 
         return new_rot, new_tilt, new_psi
     
