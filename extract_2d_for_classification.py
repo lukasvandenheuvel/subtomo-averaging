@@ -306,7 +306,7 @@ def main():
     # The tomo angles rotate the filament to be parallel to the X-axis
     # We need angles that rotate the filament to be parallel to the Z-axis
     # This requires pre-multiplying by R_y(-90°) which takes X to Z
-    # R_new = R_y(-90°) * R_ZYZ(rot, tilt, psi)
+    # R_new = R_x(-90°) * R_ZYZ(rot, tilt, psi)
     
     def convert_tomo_to_spa_angles(rot, tilt, psi):
         """
@@ -321,7 +321,7 @@ def main():
         # Create the original ZYZ rotation
         rot_original = R.from_euler('zyz', [psi, tilt, rot], degrees=True)
         
-        # Rotation that takes Y-axis to Z-axis: -90° around Y
+        # Rotation that takes Y-axis to Z-axis: -90° around X
         rot_x_minus90 = R.from_euler('x', -90, degrees=True)
         
         # Compose: R_new = R_y(-90) * R_original
@@ -382,7 +382,7 @@ def main():
     tomo_specific = [
         '_rlnTomoName',
         '_rlnTomoParticleId', 
-        '_rlnTomoParticleName',
+        # '_rlnTomoParticleName', # Keep this as it may be useful
         '_rlnTomoManifoldIndex',
         '_rlnTomoSubtomogramRot',
         '_rlnTomoSubtomogramTilt',

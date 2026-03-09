@@ -1,7 +1,7 @@
 1. Reconstruct tomograms at bin2, using only a single MPI node (otherwise it won't fit in memory) 
 
 2. Generate real-space subtomos and write out projections along the tilt axes:  
-```mpirun -n 5 `which relion_tomo_subtomo_mpi` --p Picks/job012/particles.star --t Tomograms/job011/tomograms_bin1.star --theme classic --o Extract/job029/ --b 512 --div --nrm --float16 --real_subtomo --bin 1 --min_frames 1 --j 10 --pipeline_control Extract/job029/```
+```mpirun -n 2 `which relion_tomo_subtomo_mpi` --p Picks/job012/particles.star --t Tomograms/job011/tomograms_bin1.star --theme classic --o Extract/job029/ --b 512 --div --nrm --float16 --real_subtomo --bin 1 --min_frames 1 --j 10 --pipeline_control Extract/job029/```
 
 3. Save the lowest tilt angle projections as mrcs files and give them the correct tilt angles and priors:   
 ```python extract_2d_for_classification.py --i Extract/job032/particles_for_class2d.star --o Class2D_prep/job036/ --bg_radius 5 --normalize```

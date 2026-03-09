@@ -1,0 +1,365 @@
+#tomotools
+tomotools reconstruct -b 4 -d 3000 --aretomo *.mrc
+
+# aretomo2warp
+
+cd warp
+
+tomotools aretomo2warp --v2 --frames-dir ../frames_tiff -n Position_47_2 ../ts-aligned ./
+
+# Move all files and folders to ./warp, remove ./warp/Position_##
+
+# warp
+
+cd Position_*
+
+WarpTools create_settings --folder_data frames --output warp_frameseries.settings --extension "*.mrc" --angpix 1.98 --exposure 3.83 --folder_processing processing   
+
+
+WarpTools fs_motion_and_ctf --settings warp_frameseries.settings --m_grid 1x1x1 --c_grid 2x2x1 --c_range_min 50 --c_range_max 10 --c_defocus_max 8 --out_averages --c_use_sum --out_average_halves
+
+WarpTools filter_quality --settings warp_frameseries.settings --histograms
+
+WarpTools ts_import --mdocs ./mdoc --frameseries ./processing --tilt_exposure 3.83 --output ./processing/tomostar
+
+WarpTools create_settings --folder_data processing/tomostar --output warp_tiltseries.settings --extension *.tomostar --angpix 1.98 --exposure 3.83 --folder_processing processing --tomo_dimensions 4096x4096x3000
+
+WarpTools ts_import_alignments --settings warp_tiltseries.settings --alignments ./imod --alignment_angpix 1.98
+
+WarpTools ts_defocus_hand --settings warp_tiltseries.settings --set_auto
+
+WarpTools ts_ctf --settings warp_tiltseries.settings --defocus_max 8 --range_high 4
+
+WarpTools filter_quality --settings warp_tiltseries.settings --histograms
+
+WarpTools ts_reconstruct --settings warp_tiltseries.settings --angpix 7.92 --dont_invert --deconv
+
+ 
+
+---in Imod: do picking---
+
+# Export particles:
+
+cryolo_boxmanager_tools.py coords2star -i Position_47_2_ali_clean.coords -o out_warp/ --scale 4 --apix 1.98 --mag 64000 --flipratio 0.5
+
+# Change micrograph name in the star file
+
+sed -i 's/_ali_c/_ali/g' particles_warp.star
+
+# Copy particle star file
+cd ../..
+cp processing/reconstruction/out_warp/particles_warp.star 
+
+
+-----dynamo-----
+WarpTools ts_export_particles --settings warp_tiltseries.settings --input_star particles_warp.star --output_star relion3_b8/particles.star --coords_angpix 1.98 --output_angpix 15.84 --box 64 --diameter 1013 --relative_output_paths --3d --output_processing bin_8_3d
+
+rm -r bin_8_3d
+
+
+WarpTools ts_export_particles --settings warp_tiltseries.settings --input_star particles_dynamo_b4.star --output_star relion3_b4/particles.star --coords_angpix 1.98 --output_angpix 7.92 --box 64 --diameter 506 --relative_output_paths --3d --output_processing bin_4_3d
+
+rm -r bin_4_3d
+
+WarpTools ts_export_particles --settings warp_tiltseries.settings --input_star particles_dynamo_b2.star --output_star relion3_b2/particles.star --coords_angpix 1.98 --output_angpix 3.96 --box 64 --diameter 253 --relative_output_paths --3d --output_processing bin_2_3d --device_list 1
+
+WarpTools ts_export_particles --settings warp_tiltseries.settings --input_star particles_dynamo_b2.star --output_star relion3_b2/particles.star --coords_angpix 2.42 --output_angpix 4.84 --box 128 --diameter 619 --relative_output_paths --3d --output_processing bin_2_3d --device_list 1
+
+rm -r bin_2_3d
+
+WarpTools ts_export_particles --settings warp_tiltseries.settings --input_star particles_dynamo_b1.star --output_star relion/particles.star --coords_angpix 2.42 --output_angpix 2.42 --box 128 --diameter 309 --relative_output_paths --2d --output_processing bin_1 --device_list 1
+
+WarpTools ts_export_particles --settings warp_tiltseries.settings --input_star particles_dynamo_b1.star --output_star relion3/particles.star --coords_angpix 2.42 --output_angpix 2.42 --box 160 --diameter 387 --relative_output_paths --3d --output_processing bin_1_3d --device_list 2
+
+
+WarpTools ts_export_particles --settings warp_tiltseries.settings --input_star particles_dynamo_final.star --output_star relion/particles.star --coords_angpix 2.42 --output_angpix 2.42 --box 128 --diameter 309 --relative_output_paths --2d --output_processing bin_1 --device_list 1
+
+WarpTools ts_export_particles --settings warp_tiltseries.settings --input_star particles_dynamo_final_c3.star --output_star relion3/particles.star --coords_angpix 2.42 --output_angpix 2.42 --box 160 --diameter 387 --relative_output_paths --3d --output_processing bin_1_3d --device_list 2
+
+
+WarpTools ts_export_particles --settings warp_tiltseries.settings --input_star run_data_b2.star --output_star relion/particles.star --coords_angpix 4.84 --output_angpix 2.42 --box 160 --diameter 387 --relative_output_paths --2d --output_processing bin_1 --device_list 1
+
+WarpTools ts_export_particles --settings warp_tiltseries.settings --input_star run_data_b2.star --output_star relion3/particles.star --coords_angpix 4.84 --output_angpix 2.42 --box 160 --diameter 387 --relative_output_paths --3d --output_processing bin_1_3d --device_list 2
+
+
+# create a dynamo folder
+mkdir dynamo
+
+mkdir dynamo_project && cd dynamo_project
+cp ../particles_edit.tbl ./particles_edit.tbl
+mv ../filamentsData_ctf ./
+
+
+
+dynamo
+
+T = dread('particles_edit.tbl');
+T2 = dtrandomize_azimuth(T);
+dwrite(T2,'particles_edit_mod.tbl');
+oa=daverage('filamentsData_ctf','t','particles_edit_mod.tbl','mw',50);
+dview(oa.average);
+dwrite(oa.average,'raw_template_ctf.em');
+
+(chimerax vop scale #1 factor -1)
+
+
+
+
+#### check the radius and quality, generate a tube reference to ensure the alignment
+
+dcp.new('bin8_align_1', 'd', 'filamentsData_ctf','template','raw_template_ctf.em','masks','default','t','particles_edit_mod.tbl');
+dcp bin8_align_1
+
+==============classification===============
+wb = dpkpca.new('myPCA','t','temp.tbl','d','filamentsData_b4_ctf','m','editorMask.em');
+wb.setBand([0,0.5,2]);
+wb.setSym('c1');
+wb.settings.general.bin.value = 0;
+wb.settings.computing.cores.value = '50';
+wb.settings.computing.useGpus.value = true;
+wb.settings.computing.gpus.value = [0 1 2 3];
+wb.getBlockSize()
+wb.unfold();
+wb.steps.items.prealign.compute();
+wb.steps.items.ccmatrix.compute();
+wb.steps.items.eigentable.compute();
+wb.steps.items.eigenvolumes.compute();
+wb.steps.items.tsne.compute();
+wb.show.tsne([1,2,4,5]);
+wb.show.tsne({[1,2,4,5] , [1:6]});
+
+
+wb = dread("myPCA.PCA");
+============================================
+
+Generate mask: (masks > mask Editor)
+- cylinder
+- r = 15
+- height 50%
+- gaussian 3
+"create mask" and view
+Transfer mask to wizard > alignment, classification, FCS (one by one)
+Close, hit "fill with ones" for Fourier and Fourier shell mask
+
+Numerical parameters:
+
+Setting numeric:
+round 1
+Iterations: 2
+Cone search: aperture 20°, sampling 3°
+In‐plane (azimuth): range 360°, sampling 15°
+Refine: 2; refine factor: 2
+High/low‐pass: 2/25 Fourier pixels (→50 Å at iteration 1)
+symmetry: c1
+Particle dimensions: set to box size
+Shift limits: [5 5 2] px; limiting way: 4
+advance enable coneflip 2
+Boxsisize 64
+
+
+
+Setting numeric:
+round 2
+Iterations: 2
+Cone search: aperture 20°, sampling 3°
+In‐plane (azimuth): range 45°, sampling 5°
+Refine: 2; refine factor: 2
+High/low‐pass: 2/25 Fourier pixels (→50 Å at iteration 1)
+symmetry: c1
+Shift limits: [5 5 2] px; limiting way: 4
+advance enable coneflip 2
+Boxsisize 64
+
+
+Seting computation:
+identifier: 0 1 2 3
+GPU standalone:
+cpu core:1
+GPU: hit info to check if cores are recognized
+
+Parallelize: 50
+
+check and unfold
+run: bin4_align_1.exe
+OK
+
+Control: Check, then Unfold
+
+Run the executable
+
+## OR: on SLURM ##
+
+sed -i 's/srun  1 dynamo/srun -n 1 dynamo/g; s/srun  50 dynamo/srun -n 50 dynamo/g' *.sh
+
+dtplot(ttt((ttt(:,23)==2),:),'m','rays')
+dtplot(ttt((ttt(:,23)==2),:),'pf','oriented_positions')
+
+cp bin4_align_1/results/ite_0004/averages/average_ref_001_ite_0004.em ./
+cp bin4_align_1/results/ite_0004/averages/refined_table_ref_001_ite_0004.tbl ./
+
+###### when you can see the helical from average
+
+e2proc3d.py --mult=-1 average_ref_001_ite_0004.em average_ref_001_ite_0004.mrc
+relion_image_handler --i average_ref_001_ite_0004.mrc --o average_ref_001_ite_0004.mrc --force_header_angpix 15.84
+
+relion_helix_toolbox --i average_ref_001_ite_0004.mrc --twist_min 0.5 --twist_max 2 --rise_min 4.5 --rise_max 4.9 --z_percentage 0.3 --search --cyl_outer_diameter 200 --angpix 15.84
+relion_helix_toolbox --i average_ref_001_ite_0004.mrc --twist 1.37 --rise 4.87 --z_percentage 0.3 --impose --cyl_outer_diameter 200 --angpix 15.84 --o average_ref_001_ite_0004_sym.mrc
+relion_image_handler --i average_ref_001_ite_0004_sym.mrc --o average_ref_001_ite_0004_sym.mrc --force_header_angpix 1
+e2proc3d.py --mult=-1 average_ref_001_ite_0004_sym.mrc average_ref_001_ite_0004_sym.em
+
+
+#####
+
+# edit the tbl file for better grouping (in python)
+
+dynamo
+dcp.new('abp_align', 'd', 'filamentsData_ctf','template','average_ref_001_ite_0004_sym.em','masks','default','t','refined_table_ref_001_ite_0004_mod.tbl');
+
+set mask smaller mask (half box)
+r ~12
+height 30
+Gaussian 3
+
+multireferece > adaptive filtering..... > Derive a project (this generates a new project with 2 references and particle sets)
+
+
+dcp abp_align_eo
+
+
+adative parameter threshold 0.143, low pass resultion at 25, push back = 0
+(do not hit swap particles)
+
+Setting numeric:
+round 1
+Iterations: 4
+Cone search: aperture 20°, sampling 3°
+In‐plane (azimuth): range 20°, sampling 3°
+Refine: 2; refine factor: 2
+High/low‐pass: 2/25 Fourier pixels (→50 Å at iteration 1)
+symmetry: c1 or h[-1.37,0.3]
+Particle dimensions 64
+Shift limits: [4 4 2] px; limiting way: 4
+advance enable coneflip 2, azmuthflip 2
+Boxsisize 64
+
+
+
+extract in bin4 in warp
+generate .tbl and .em file from bin4 output
+
+
+mkdir dynamo_project_b4 && cd dynamo_project_b4
+cp ../particles_b4_edit.tbl ./particles_b4_edit.tbl
+mv ../filamentsData_b4_ctf ./
+
+dynamo
+oa=daverage('filamentsData_b4_ctf','t','particles_b4_edit.tbl','mw',50);
+dview(oa);
+dwrite(oa.average,'raw_template.em');
+
+e2proc3d.py --mult=-1 raw_template.em raw_template.mrc
+relion_image_handler --i raw_template.mrc --o raw_template.mrc --force_header_angpix 7.92
+
+
+relion_helix_toolbox --i raw_template.mrc --twist_min 1 --twist_max 1.9 --rise_min 4.5 --rise_max 4.8 --z_percentage 0.3 --search --cyl_outer_diameter 160 --angpix 7.92
+relion_helix_toolbox --i raw_template.mrc --twist 1.3 --rise 4.8 --z_percentage 0.3 --impose --cyl_outer_diameter 160 --angpix 7.92 --o raw_template_sym.mrc
+
+relion_image_handler --i raw_template_sym.mrc --o raw_template_sym.mrc --force_header_angpix 1
+e2proc3d.py --mult=-1 raw_template_sym.mrc raw_template_sym.em
+
+dcp.new('abp_align', 'd', 'filamentsData_b4_ctf','template','raw_template_sym.em','masks','default','t','particles_b4_edit.tbl');
+
+set mask as above
+
+multireferece > adaptive filtering..... > Derive a project
+
+close the project 
+
+
+dcp abp_align_eo
+
+
+
+template > averaging (can use the smaller particle batch to measure the resolution)
+
+adative parameter threshold 0.143, low pass 3
+
+
+Moving to bin 2
+
+cd dynamo
+
+mkdir dynamo_project_b2 && cd dynamo_project_b2
+cp ../particles_b2_edit.tbl ./particles_b2_edit.tbl
+mv ../filamentsData_b2_ctf ./
+
+
+dynamo
+oa=daverage('filamentsData_b2_ctf','t','particles_b2_edit.tbl','mw',50);
+dview(oa);
+dwrite(oa.average,'raw_template.em');
+
+e2proc3d.py --mult=-1 raw_template.em raw_template.mrc
+relion_image_handler --i raw_template.mrc --o raw_template.mrc --force_header_angpix 3.96
+
+
+relion_helix_toolbox --i raw_template.mrc --twist_min 0.9 --twist_max 1.5 --rise_min 4.6 --rise_max 4.9 --z_percentage 0.3 --search --cyl_outer_diameter 160 --angpix 3.96
+relion_helix_toolbox --i raw_template.mrc --twist 1.24 --rise 4.85 --z_percentage 0.3 --impose --cyl_outer_diameter 160 --angpix 3.96 --o raw_template_sym.mrc
+
+relion_image_handler --i raw_template_sym.mrc --o raw_template_sym.mrc --force_header_angpix 1
+e2proc3d.py --mult=-1 raw_template_sym.mrc raw_template_sym.em
+
+dcp.new('abp_align', 'd', 'filamentsData_b2_ctf','template','raw_template_sym.em','masks','default','t','particles_b2_edit.tbl');
+
+### generate model for bin1
+
+dynamo
+oa=daverage('filamentsData_b2_ctf','t','temp.tbl','mw',50);
+dview(oa)
+dwrite(oa.average,'raw_template_final.em');
+
+e2proc3d.py --mult=-1 raw_template_final.em raw_template_final.mrc
+relion_image_handler --i raw_template_final.mrc --o raw_template_final.mrc --force_header_angpix 4.84
+
+relion_helix_toolbox --i raw_template_final.mrc --twist_min -2 --twist_max -0.8 --rise_min 4 --rise_max 5 --z_percentage 0.3 --search --cyl_outer_diameter 250 --angpix 4.84
+relion_helix_toolbox --i raw_template_final.mrc --twist -0.73 --rise 4.61 --z_percentage 0.3 --impose --cyl_outer_diameter 300 --angpix 4.84 --o raw_template_final_sym.mrc
+relion_image_handler --i raw_template_final_sym.mrc --o raw_template_final_sym_b1.mrc --angpix 4.84 --rescale_angpix 2.42 --new_box 128
+
+
+
+dcp abp_align_eo
+
+dynamo
+oa=daverage('filamentsData_b1_ctf','t','temp.tbl','mw',50);
+dview(oa)
+dwrite(oa.average,'raw_template_final.em');
+
+e2proc3d.py --mult=-1 raw_template_final.em raw_template_final.mrc
+relion_image_handler --i raw_template_final.mrc --o raw_template_final.mrc --force_header_angpix 2.42
+
+
+relion_helix_toolbox --i raw_template_final.mrc --twist_min -3 --twist_max -0.1 --rise_min 4 --rise_max 5 --z_percentage 0.3 --search --cyl_outer_diameter 250 --angpix 2.42
+
+relion_helix_toolbox --i raw_template_final.mrc --twist -1.28182 --rise 4.91309 --z_percentage 0.3 --impose --cyl_outer_diameter 250 --angpix 2.42 --o raw_template_final_sym.mrc
+
+
+dynamo_symmetry_scan(dread('average.em'), 'h','phi','-1.5:0.01:1.5','dz',0.1:0.1:5,'type','pearson','nfig',3,'mw',30,'mask',dread('mask.em'))
+
+wb = dpkpca.new('classiciation','t','refined_table_ref_001_ite_0008.tbl','d','filamentsData_ctf','m','bin4_align_1/settings/mask_r15_h100_g2.em')
+
+
+# for exreaction check
+tomodrgn backproject_voxel particles_optimisation_set.star --output output/backproject/ref.mrc --uninvert-data --recon-dose-weight --source-software relion --lazy
+
+# trainning
+tomodrgn train_vae run_optimisation_set.star --outdir output/vae --zdim 8 --uninvert-data --num-epochs 40 --l-dose-mask --recon-dose-weight --recon-tilt-weight --batch-size 16 --lazy --num-worker 8 --prefetch-factor 4 --persistent-workers --source-software relion --multigpu
+
+export MPLBACKEND=Agg
+tomodrgn convergence_vae output/vae --final-maxima 2 --ground-truth tomodrgn convergence_vae output/vae --final-maxima 2 --ground-truth Refine3D/job006/run_class001.mrc
+
+tomodrgn analyze output/vae --ksample 20
+
+tomodrgn eval_vol --weights output/vae/weights.pkl -c output/vae/config.pkl -o output/vae/eval_vol_allz --zfile output/vae/z.train.pkl -b 32 --downsample 64
+
+tomodrgn analyze_volumes --voldir output/vae/eval_vol_allz --config output/vae/config.pkl --outdir output/vae/eval_vol_allz_analyze_volumes_mask_soft --ksample 100 --mask soft
+
