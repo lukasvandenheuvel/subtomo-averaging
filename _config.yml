@@ -1,4 +1,4 @@
-theme: jekyll-theme-cayman
+theme: jekyll-theme-minimal
 title: Subtomogram averaging of amyloid fibrils
 description: >- # this means to ignore newlines until "baseurl:"
   This repository shows step-by-stem how to do subtomogram averaging of amyloid fibrils.
