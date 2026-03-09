@@ -30,20 +30,30 @@
     - Press ```n``` to start a new filament
     - ```Shift + d``` to delete a filament
 
-8. After picking, save the model as ```filaments.mod``` (on ZaP window, press ```s```).
+8. After picking, save the model as ```XXX_filaments.mod``` (on ZaP window, press ```s```).
 
 9. Add points between start-end coordinates and create a coordinate file:
     ```shell
     # Add points between start-end, every 1 (binned) pixel
-    addModPts filaments.mod 1 
+    addModPts *_filaments.mod 1 
     # Convert to coordinate file
-    model2point -c filaments_PtsAdded.mod filaments_PtsAdded.coords
+    model2point -c XXX_filaments_PtsAdded.mod XXX_filaments_PtsAdded.coords
+    ```
+    This will create the txt file with 4 columns: [filament_ID X Y Z]. The column order needs to be changed to [X Y Z filament_ID] with this command:
+    ```bash
+    awk '{print $2, $3, $4, $1}' XXX_filaments_PtsAdded.coords > XXX_filaments_PtsAdded_XYZI.coords
     ```
 
 10. Export particles with cryolo:
     ```shell
-    cryolo_boxmanager_tools.py coords2star -i filaments_PtsAdded.coords -o out_warp/ --scale 4 --apix 1.98 --mag 64000 --flipratio 0.5
+    cryolo_boxmanager_tools.py coords2star -i *_XYZI.coords -o out_warp/ --scale 4 --apix 1.98 --mag 64000 --flipratio 0.5
     ```
+    In the output .star file, correct the name of the tomostar file:
+    ```bash
+    sed -i 's/Position_91_3_ali_7p92Apx_filaments_PtsAdded_.tomostar/Position_91_3_ali.tomostar/g' out_warp/particles_warp.star
+    ```
+    
+
     
 End of filament picking!<p align=center>
 [<- Back](tomo-reconstruction.md) | [Next ->](dynamo-extraction.md) 
