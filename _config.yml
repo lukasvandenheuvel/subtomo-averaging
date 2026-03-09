@@ -1,0 +1,10 @@
+theme: jekyll-theme-cayman
+title: Subtomogram averaging of amyloid fibrils
+description: >- # this means to ignore newlines until "baseurl:"
+  This repository shows step-by-stem how to do subtomogram averaging of amyloid fibrils.
+# baseurl: "/" # the subpath of your site, e.g. /blog
+# url: "https://lukasvandenheuvel.github.io/subtomo-averaging/"
+# github_username:  lukasvandenheuvel
+
+# # Build settings
+# markdown: kramdown
