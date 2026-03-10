@@ -44,6 +44,7 @@
     ![Dynamo open mask editor](imgs/dynamo-02.png "Dynamo open mask editor")
 
     Generate a mask with the following specifications:
+
     | Parameter    | Value      |
     | --------     | -------    |
     | r            | 15         |
@@ -76,10 +77,12 @@
     | shift limits              | 4 4 2      | 4 4 2          |
     | shift limiting way        | 4          | 4          |
 
+
     ![Dynamo numerical parameters](imgs/dynamo-05.png "Dynamo numerical parameters")
 
 6. Set the computing environment to the specifications of your computing system.  
     In our case: *GPU standalone*,
+
     | Parameter    | Value      |
     | --------     | -------    |
     | GPU identifier            | 0 1 2 3         |
@@ -123,9 +126,39 @@
     ```
 
 10. Create a new dynamo project:  
-    {% include codeHeader.html %}
     ```matlab
     dynamo
     
     dcp.new('abp_align', 'd', 'filamentsData_ctf','template','average_ref_001_ite_0004_sym.em','masks','default','t','refined_table_ref_001_ite_0004_mod.tbl');
     ```
+
+    Generate a new, smaller mask (see dynamo instructions above):
+    | Parameter    | Value      |
+    | --------     | -------    |
+    | r            | ~12         |
+    | h            | 30         |
+    | Gaussian     | 3          |
+
+    And use the following numeric parameters:
+
+    | Parameter                     | round 1    |
+    | --------                      | -------    |
+    | iterations                    | 4          |
+    | cone aperture                 | 20         |
+    | cone sampling                 | 3          |
+    | **Advanced:** cone flip       | 2          |
+    | azymuth rotation angle        | 20        |
+    | azymuth rotation sampling     | 3         |
+    | **Advanced:** azymuth flip    | 2          |
+    | refine                        | 2          |
+    | refine factor                 | 2          |
+    | high pass                     | 2          |
+    | low                           | 25         |
+    | symmetry                      | c1 or h[-1.01,0.3]    |
+    | particle dimensions           | 64         |
+    | shift limits                  | 4 4 2      |
+    | shift limiting way            | 4          |
+
+    You can apply helical symmetry, but note that the sign of the twist is opposite of that in Relion, and that the rise is defined in ```pixels```, not in Angstrom.
+
+    
