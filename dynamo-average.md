@@ -82,7 +82,7 @@
 
 6. Set the computing environment to the specifications of your computing system.  
     In our case: *GPU standalone*,
-
+    
     | Parameter    | Value      |
     | --------     | -------    |
     | GPU identifier            | 0 1 2 3         |
@@ -133,6 +133,7 @@
     ```
 
     Generate a new, smaller mask (see dynamo instructions above):
+
     | Parameter    | Value      |
     | --------     | -------    |
     | r            | ~12         |
@@ -169,7 +170,8 @@
         | --------     | -------    |
         | threshold            | 0.143         |
         | low-pass reolution            | 25         |
-        | push back     | 0          |
+        | push back     | 0          |  
+
 
     - change project name to abp_align_eo
 
@@ -178,4 +180,4 @@
     ```
     ./abp_align_eo.exe
     ```
-
+ ## 
