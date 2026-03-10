@@ -48,7 +48,15 @@
     This will take a few minutes with 54 processes.
     
 
-End of particle extraction!<p align=center>
-[<- Back](imod-picking.md) | [Next ->](dynamo-average.md) 
-</p>
+End of particle extraction!
+
+---
+
+<div align="center">
+
+[← Back](imod-picking.md) | [Next →](dynamo-average.md)
+
+[Home](index.md)
+
+</div>
 
