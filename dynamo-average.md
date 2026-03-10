@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Generate an initial model with Dynamo
 
 ## Average tube at bin 8
@@ -184,7 +188,7 @@
 ---
 
 <p align="center">
-  <a href="dynamo-extraction.md">← Back</a>
+  <a href="dynamo-extraction.html">← Back</a>
   <br><br>
-  <a href="index.md">Home</a>
+  <a href=".">Home</a>
 </p>

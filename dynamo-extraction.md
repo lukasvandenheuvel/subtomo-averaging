@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Extraction for dynamo
 
 1. Inside the ```warp/``` directory, copy the ```particles_warp.star``` from the previous step. 
@@ -53,8 +57,8 @@ End of particle extraction!
 ---
 
 <p align="center">
-  <a href="imod-picking.md">← Back</a> | <a href="dynamo-average.md">Next →</a>
+  <a href="imod-picking.html">← Back</a> | <a href="dynamo-average.html">Next →</a>
   <br><br>
-  <a href="index.md">Home</a>
+  <a href=".">Home</a>
 </p>
 

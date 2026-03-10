@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Pick filaments in IMOD and extract coordinates
 
 1. Open the tomogram in ```3dmod```.
@@ -60,7 +64,7 @@ End of filament picking!
 ---
 
 <p align="center">
-  <a href="tomo-reconstruction.md">← Back</a> | <a href="dynamo-extraction.md">Next →</a>
+  <a href="tomo-reconstruction.html">← Back</a> | <a href="dynamo-extraction.html">Next →</a>
   <br><br>
-  <a href="index.md">Home</a>
+  <a href=".">Home</a>
 </p>
