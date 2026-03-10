@@ -3,6 +3,7 @@
 ## Average tube at bin 8
 
 1. Move into ```warp/dynamo``` and create a project directory called ```dynamo_project_b8```:
+
     ```bash
     mkdir dynamo_project_b8 && cd dynamo_project_b8
     cp ../particles_edit.tbl ./particles_edit.tbl
@@ -121,12 +122,10 @@
     Wen-Lu's ipynb to generate 2 half-sets
     ```
 
-10. Create a new dynamo project:
+10. Create a new dynamo project:  
+    {% include codeHeader.html %}
     ```matlab
     dynamo
     
     dcp.new('abp_align', 'd', 'filamentsData_ctf','template','average_ref_001_ite_0004_sym.em','masks','default','t','refined_table_ref_001_ite_0004_mod.tbl');
     ```
-
-##
-        code/text here
