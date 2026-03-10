@@ -59,11 +59,8 @@ End of filament picking!
 
 ---
 
-<div align="center">
-
-[← Back](tomo-reconstruction.md) | [Next →](dynamo-extraction.md)
-
-[Home](index.md)
-
-</div>
+<p align="center">
+  <a href="tomo-reconstruction.md">← Back</a> | <a href="dynamo-extraction.md">Next →</a>
+  <br><br>
+  <a href="index.md">Home</a>
 </p>

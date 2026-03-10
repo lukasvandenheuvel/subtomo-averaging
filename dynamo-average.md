@@ -183,12 +183,8 @@
 
 ---
 
-<div align="center">
-
-[← Back](dynamo-extraction.md)
-
-[Home](index.md)
-
-</div>
-
- ## 
+<p align="center">
+  <a href="dynamo-extraction.md">← Back</a>
+  <br><br>
+  <a href="index.md">Home</a>
+</p>

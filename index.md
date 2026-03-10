@@ -7,8 +7,6 @@
 
 ---
 
-<div align="center">
-
-[Next →](tomo-reconstruction.md)
-
-</div>
+<p align="center">
+  <a href="tomo-reconstruction.md">Next →</a>
+</p>

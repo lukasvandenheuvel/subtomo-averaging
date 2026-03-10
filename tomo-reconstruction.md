@@ -2,10 +2,8 @@
 
 ---
 
-<div align="center">
-
-[← Back](index.md) | [Next →](imod-picking.md)
-
-[Home](index.md)
-
-</div>
+<p align="center">
+  <a href="index.md">← Back</a> | <a href="imod-picking.md">Next →</a>
+  <br><br>
+  <a href="index.md">Home</a>
+</p>

@@ -52,11 +52,9 @@ End of particle extraction!
 
 ---
 
-<div align="center">
-
-[← Back](imod-picking.md) | [Next →](dynamo-average.md)
-
-[Home](index.md)
-
-</div>
+<p align="center">
+  <a href="imod-picking.md">← Back</a> | <a href="dynamo-average.md">Next →</a>
+  <br><br>
+  <a href="index.md">Home</a>
+</p>
 
