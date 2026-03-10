@@ -9,9 +9,9 @@
     padding: 3px 9px;
     font-size: 12px;
     cursor: pointer;
-    background: rgba(255, 255, 255, 0.12);
-    color: #cdd7e0;
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(0, 0, 0, 0.45);
+    color: #e8e8e8;
+    border: 1px solid rgba(255, 255, 255, 0.45);
     border-radius: 4px;
     opacity: 0;
     transition: opacity 0.15s, background 0.15s;
@@ -21,13 +21,14 @@
     opacity: 1;
   }
   .copy-btn:hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(0, 0, 0, 0.7);
     color: #fff;
+    border-color: rgba(255, 255, 255, 0.7);
   }
   .copy-btn.copied {
-    background: rgba(100, 200, 120, 0.35);
+    background: rgba(60, 160, 80, 0.75);
     color: #fff;
-    border-color: rgba(100, 200, 120, 0.6);
+    border-color: rgba(100, 220, 120, 0.8);
   }
 </style>
 <script src="{{ '/assets/js/copy-code.js' | relative_url }}" defer></script>
