@@ -49,6 +49,6 @@
     
 
 End of particle extraction!<p align=center>
-[<- Back](picking-imod.md) | [Next ->](dynamo-average.md) 
+[<- Back](imod-picking.md) | [Next ->](dynamo-average.md) 
 </p>
 

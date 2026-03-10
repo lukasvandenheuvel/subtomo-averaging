@@ -16,4 +16,9 @@
 
     ![Dynamo average](imgs/dynamo-01.png "Dynamo average")
 
-2. 
+2. Generate a new dynamo project with the tube as a template:
+    ```matlab
+    dcp.new('bin8_align_1', 'd', 'filamentsData_ctf','template','raw_template_ctf.em','masks','default','t','particles_edit_mod.tbl');
+    
+    dcp bin8_align_1
+    ```
