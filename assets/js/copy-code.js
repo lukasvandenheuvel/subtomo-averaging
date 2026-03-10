@@ -1,9 +1,14 @@
 document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('pre').forEach(function (pre) {
+    var wrapper = document.createElement('div');
+    wrapper.className = 'copy-btn-wrapper';
+    pre.parentNode.insertBefore(wrapper, pre);
+    wrapper.appendChild(pre);
+
     var btn = document.createElement('button');
     btn.className = 'copy-btn';
     btn.textContent = 'Copy';
-    pre.appendChild(btn);
+    wrapper.appendChild(btn);
 
     btn.addEventListener('click', function () {
       var code = pre.querySelector('code');

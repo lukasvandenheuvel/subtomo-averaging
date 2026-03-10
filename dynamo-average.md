@@ -120,12 +120,12 @@
 
 ## Gold-standard refinement at bin 8
 
-9. To generate two half particle sets fo the gold-standard FSC calculation, we need to make sure that particles originating from the same filament end up in different particle sets.  
+10. To generate two half particle sets fo the gold-standard FSC calculation, we need to make sure that particles originating from the same filament end up in different particle sets.  
     ```
     Wen-Lu's ipynb to generate 2 half-sets
     ```
 
-10. Create a new dynamo project:  
+11. Create a new dynamo project:  
     ```matlab
     dynamo
     
@@ -159,6 +159,23 @@
     | shift limits                  | 4 4 2      |
     | shift limiting way            | 4          |
 
-    You can apply helical symmetry, but note that the sign of the twist is opposite of that in Relion, and that the rise is defined in ```pixels```, not in Angstrom.
+    You can apply helical symmetry, but note that the sign of the twist is opposite of that in Relion, and that the rise is defined in *pixels*, not in Angstrom.
 
-    
+    Now, adopt 2 references and particle sets:
+    - multireferece > adaptive filtering..... > Derive a project
+    - multireferece > adaptive filtering > Edit for adaptive run:
+
+        | Parameter    | Value      |
+        | --------     | -------    |
+        | threshold            | 0.143         |
+        | low-pass reolution            | 25         |
+        | push back     | 0          |
+
+    - change project name to abp_align_eo
+
+    Then check and unfold the project, and run the executable:
+
+    ```
+    ./abp_align_eo.exe
+    ```
+
