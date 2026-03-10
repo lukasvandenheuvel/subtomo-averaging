@@ -45,7 +45,7 @@
     --wiener_epsilon 0.1 \
     --nproc 54 
     ```
-    This will take a few minutes.
+    This will take a few minutes with 54 processes.
     
 
 End of particle extraction!<p align=center>
