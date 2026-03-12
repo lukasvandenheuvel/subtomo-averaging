@@ -15,8 +15,7 @@ if __name__ == "__main__":
     parser.add_argument('-t2', required=True, metavar='TABLE2', dest='t2', help='Relative path to second half-set .tbl file')
     parser.add_argument('-w', required=True, metavar='WARP_STAR', dest='w', help='Relative path to reference STAR file')
     parser.add_argument('-o', required=True, metavar='OUTPUT_STAR', dest='o', help='Output STAR file name (relative to root)')
-    parser.add_argument('-br', type=int, required=True, metavar='BINNING_REF', dest='br', help='Binning factor of the reference STAR file')
-    parser.add_argument('-bo', type=int, required=True, metavar='BINNING_OUT', dest='bo', help='Binning factor of the output STAR file')
+    parser.add_argument('-b', type=int, required=True, metavar='BINNING', dest='b', help='Binning factor of the reference STAR file')
     parser.add_argument('-a', type=float, required=True, metavar='ANGPIX', dest='angpix', help='Pixel size in Angstrom')
     args = parser.parse_args()
 
@@ -25,8 +24,7 @@ if __name__ == "__main__":
     particle_table2 = os.path.join(tomo_root_path, args.t2)
     star_ref = os.path.join(tomo_root_path, args.w)
 
-    binning_ref = args.br
-    binning_out = args.bo
+    binning = args.b
     pixel_size = args.angpix
 
     # get particle index, corrected xyz coordinates, and euler angles for each tomogram
@@ -53,9 +51,9 @@ if __name__ == "__main__":
     _, star_ref_df = read_star(star_ref_path)
     #_, warp_helical_df = read_star(warp_helical)
     particle_mask = (par_table[:, 0].astype(int)) - 1
-    star_dyn_df["_rlnCoordinateX"] = star_dyn_df["_rlnCoordinateX"].astype(float)*(binning_ref / binning_out)
-    star_dyn_df["_rlnCoordinateY"] = star_dyn_df["_rlnCoordinateY"].astype(float)*(binning_ref / binning_out)
-    star_dyn_df["_rlnCoordinateZ"] = star_dyn_df["_rlnCoordinateZ"].astype(float)*(binning_ref / binning_out)
+    star_dyn_df["_rlnCoordinateX"] = star_dyn_df["_rlnCoordinateX"].astype(float)*binning
+    star_dyn_df["_rlnCoordinateY"] = star_dyn_df["_rlnCoordinateY"].astype(float)*binning
+    star_dyn_df["_rlnCoordinateZ"] = star_dyn_df["_rlnCoordinateZ"].astype(float)*binning
     star_dyn_df["_rlnMicrographName"] = star_ref_df['_rlnMicrographName'].iloc[0]
     star_dyn_df["_rlnDetectorPixelSize"] = pixel_size
     star_dyn_df["_rlnHelicalTubeID"] = star_ref_df['_rlnHelicalTubeID'].iloc[particle_mask]
@@ -69,6 +67,6 @@ if __name__ == "__main__":
     write_star(output_star, star_dyn_header, star_dyn_df)
     print(f"Done! Wrote output star file to: {output_star}")
 
-    #os.remove(star_dyn_path)
-    #os.remove(table_temp_path)
+    os.remove(star_dyn_path)
+    os.remove(table_temp_path)
 
