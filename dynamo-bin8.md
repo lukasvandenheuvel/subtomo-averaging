@@ -2,11 +2,71 @@
 layout: default
 ---
 
-# Generate an initial model with Dynamo
+# Dynamo: Generate an initial model
+
+## Subtomogram extraction at bin 8 
+
+1. Move inside the ```$ROOT/warp``` directory.
+    ```shell
+    source params.sh
+    cd $ROOT/warp
+    ```
+    
+
+2. Export the subtomograms with ```WarpTools```:
+    ```shell
+    # Compute angpix binned by 8 and box diameter (floor)
+    ANGPIX_BINNED=$(echo "$ANGPIX * 8" | bc)
+    BOXDIM=$(awk "BEGIN { print int($ANGPIX_BINNED * $BOXSIZE) }")
+    # Export particles
+    WarpTools ts_export_particles \ 
+    --settings warp_tiltseries.settings \
+    --input_star particles_warp.star \
+    --output_star relion3_b8_particles.star \
+    --coords_angpix $ANGPIX \
+    --output_angpix $ANGPIX_BINNED \
+    --box $BOXSIZE \
+    --diameter $BOXDIM \
+    --relative_output_paths \
+    --3d \
+    --output_processing bin_8_3d
+    ```
+    This will take a few minutes.
+
+3. Run the python script ```convert_warp_to_tbl.py``` which does the following:
+    - Creates a ```dynamo``` subfolder
+    - Adds tilt, psi priors to relion3_bin8_particles.star
+    - Convert to tbl with warp2dynamo
+    - Edits tbl file to include min and max tilt angle and helical tube ID.
+    ```shell
+    python3 convert_warp_to_tbl.py \
+    -r $ROOT/warp \
+    -i relion3_b8_particles.star particles_warp.star \
+    -o relion3_b8_particles_merged.star \
+    -t processing/tomostar/$TOMONAME'_ali.tomostar' \
+    -bs $BOXSIZE -b 8
+    ```
+
+4. Do CTF correction of the extracted particles with ```correct_ctf_subtomo.py```:
+    ```bash
+    conda activate tomotools
+
+    python3 correct_ctf_subtomo.py \
+    -r $ROOT/warp \
+    -s relion3_b8_particles_merged.star \
+    -t dynamo/particles_b8_edit.tbl \
+    -o dynamo/filamentsData_b8_ctf/ \
+    --bpf 0.002 0.5 \
+    --ctf_method wiener \
+    --wiener_epsilon 0.1 \
+    --nproc 54 
+    ```
+    This will take a few minutes with 54 processes.
+    
 
 ## Average tube at bin 8
 
-1. Move into ```warp/dynamo``` and create a project directory called ```dynamo_project_b8```:
+5. Move into ```warp/dynamo``` and create a project directory called ```dynamo_project_b8```:
 
     ```bash
     source params.sh # if you hadn't done it yet
@@ -37,7 +97,7 @@ layout: default
 
 ## Particle alignment at bin 8
 
-2. Generate a new dynamo project with the tube as a template:
+6. Generate a new dynamo project with the tube as a template:
     ```matlab
     dcp.new('bin8_align_1', 'd', 'filamentsData_ctf','template','raw_template_ctf.em','masks','default','t','particles_edit_mod.tbl');
 
@@ -46,7 +106,7 @@ layout: default
 
     The dynamo window will open. 
     
-3. Generate a mask: Click on "masks", then "masks editor".
+7. Generate a mask: Click on "masks", then "masks editor".
 
     ![Dynamo open mask editor](imgs/dynamo-02.png "Dynamo open mask editor")
 
@@ -62,11 +122,11 @@ layout: default
 
     ![Dynamo generate mask](imgs/dynamo-03.png "Dynamo generate mask")
 
-4. In the "Input mask" window, hit "Fill with ones" for "Fourier mask on template", then OK:
+8. In the "Input mask" window, hit "Fill with ones" for "Fourier mask on template", then OK:
 
     ![Dynamo fill fourier mask](imgs/dynamo-04.png "Dynamo fill fourier mask")
 
-5. Set the numerical parameters of the alignment (only the parameters to change are listed, leave the rest default):
+9. Set the numerical parameters of the alignment (only the parameters to change are listed, leave the rest default):
 
     | Parameter                 | round 1    | round 2    |
     | --------                  | -------    | -------    |
@@ -87,7 +147,7 @@ layout: default
 
     ![Dynamo numerical parameters](imgs/dynamo-05.png "Dynamo numerical parameters")
 
-6. Set the computing environment to the specifications of your computing system.  
+10. Set the computing environment to the specifications of your computing system.  
     In our case: *GPU standalone*,
     
     | Parameter    | Value      |
@@ -96,16 +156,16 @@ layout: default
     | CPU core            | 1         |
     | Parallelize     | 50          |
 
-7. In the dynamo main window, hit "check", then "unfold". Close dynamo.
+11. In the dynamo main window, hit "check", then "unfold". Close dynamo.
 
-8. In the terminal, leave the dynamo environment (```ctrl + c```) and run the project executable:
+12. In the terminal, leave the dynamo environment (```ctrl + c```) and run the project executable:
     ```bash
     ./bin8_align_1.exe
     ```
     and wait for the alignment to finish (can take >8 hours with ~7000 particles).
 
 ## Search for Symmetry
-9. When you see helical symmetry in your average, search for that symmetry:
+13. When you see helical symmetry in your average, search for that symmetry:
 
     ```bash
     cd $ROOT/warp/dynamo/dynamo_project_b8
@@ -128,7 +188,7 @@ layout: default
 
 ## Gold-standard refinement at bin 8
 
-10. To generate two half particle sets fo the gold-standard FSC calculation, we need to make sure that particles originating from the same filament end up in different particle sets.  
+14. To generate two half particle sets fo the gold-standard FSC calculation, we need to make sure that particles originating from the same filament end up in different particle sets.  
     ```shell
     cd $REPOSITORY
     
@@ -136,7 +196,7 @@ layout: default
     ```
     This will generate a new file, ```refined_table_ref_001_ite_0004_mod.tbl```, where particles of different filaments are listed in an alternating fashion.
 
-11. Create a new dynamo project in ```dynamo_project_b8```:  
+15. Create a new dynamo project in ```dynamo_project_b8```:  
     ```shell
     cd $ROOT/warp/dynamo/dynamo_project_b8
     dynamo
@@ -193,104 +253,15 @@ layout: default
     ```
     ./abp_align_eo.exe
     ```
+    Inspect the two half-maps once the job is done. If it looks reasonable, you can move on to the next binning.
 
-## Particle alignment at bin 4
-
-12. Now, convert the refined tbl files to star files for warp exports:
-
-    ```shell
-    python convert_tbl_to_warp.py \
-    -r $ROOT/warp \
-    -t1 dynamo/dynamo_project_b8/abp_align_eo/results/ite_0004/averages/refined_table_ref_001_ite_0004.tbl \
-    -t2 dynamo/dynamo_project_b8/abp_align_eo/results/ite_0004/averages/refined_table_ref_002_ite_0004.tbl \
-    -w particles_warp.star \
-    -o particles_dynamo_b4.star \
-    -a $ANGPIX \
-    -b 8 # binning of the reference (at bin8) 
-    ```
-
-13. Do the warp export:
-    ```shell
-    # Compute angpix binned by 4 and box diameter (floor)
-    ANGPIX_BIN4=$(echo "$ANGPIX * 4" | bc)
-    BOXDIM=$(awk "BEGIN { print int($ANGPIX_BIN4 * $BOXSIZE) }")
-    # Export particles
-    cd $ROOT/warp
-    WarpTools ts_export_particles \
-    --settings warp_tiltseries.settings \
-    --input_star particles_dynamo_b4.star \
-    --output_star relion3_b4_particles.star \
-    --coords_angpix $ANGPIX \
-    --output_angpix $ANGPIX_BIN4 \
-    --box $BOXSIZE \
-    --diameter $BOXDIM \
-    --relative_output_paths \
-    --3d \
-    --output_processing bin_4_3d
-    ```
-    Then convert the warptools to a table:
-    ```shell
-    cd $REPOSITORY
-    conda activate tomotools
-    python3 convert_warp_to_tbl.py \
-    -r $ROOT/warp \
-    -i particles_dynamo_b4.star relion3_b4_particles.star \
-    -o relion3_b4/particles_merged.star \
-    -t processing/tomostar/$TOMONAME'_ali.tomostar' \
-    -bs $BOXSIZE -b 4
-    ```
-    And subsequently the CTF correction:
-
-    ```bash
-    python3 correct_ctf_subtomo.py \
-    -r $ROOT/warp \
-    -s relion3_b4_particles_merged.star \
-    -t dynamo/particles_b4_edit.tbl \
-    -o dynamo/filamentsData_b4_ctf/ \
-    --bpf 0.002 0.5 \
-    --ctf_method wiener \
-    --wiener_epsilon 0.1 \
-    --nproc 54 
-    ```
-    Now, generate the ```dynamo_project_b4``` directory and copy the files there:
-    ```bash
-    cd $ROOT/warp/dynamo
-    mkdir dynamo_project_b4 && cd dynamo_project_b4
-    cp ../particles_b4_edit.tbl ./particles_b4_edit.tbl
-    mv ../filamentsData_b4_ctf ./
-    ```
-14. You are ready to create a dynamo average here:
-    ```bash
-    dynamo
-    ```
-    ```matlab
-    oa=daverage('filamentsData_b4_ctf','t','particles_b4_edit.tbl','mw',50);
-    dwrite(oa.average,'raw_template.em');
-    ```
-    The twist should be visible, so you can search it:
-    ```shell
-    e2proc3d.py --mult=-1 raw_template.em raw_template.mrc
-    relion_image_handler --i raw_template.mrc --o raw_template.mrc --force_header_angpix $ANGPIX_BIN4
-    relion_helix_toolbox --i raw_template.mrc --twist_min 1 --twist_max 1.9 --rise_min 4.75 --rise_max 4.8 --z_percentage 0.3 --search --cyl_outer_diameter 200 --angpix $ANGPIX_BIN4
-    ```
-    Below, set the twist and rise to the optima found above:
-    ```shell
-    # Apply symmetry
-    relion_helix_toolbox --i raw_template.mrc --twist 1.09 --rise 4.8 --z_percentage 0.3 --impose --cyl_outer_diameter 160 --angpix $ANGPIX_BIN4 --o raw_template_sym.mrc
-    # Convert back to .em with pixel size 1
-    relion_image_handler --i raw_template_sym.mrc --o raw_template_sym.mrc --force_header_angpix 1
-    e2proc3d.py --mult=-1 raw_template_sym.mrc raw_template_sym.em
-    ```
-15. Setup the dynamo project according to the following parameters:
-
-
-
-
+{% include mrc-viewer.html id="bin8" file="volumes/dynamo-bin8.mrc" isolevel=3.0 %}
 
 ---
 
 <p align="center">
-  <a href="dynamo-extraction.html">← Back</a>
+  <a href="imod-picking.html">← Back</a> | <a href="dynamo-bin4.html">Next →</a>
   <br><br>
   <a href=".">Home</a>
 </p>
+

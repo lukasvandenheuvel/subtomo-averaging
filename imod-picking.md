@@ -80,7 +80,7 @@ End of filament picking!
 ---
 
 <p align="center">
-  <a href="tomo-reconstruction.html">← Back</a> | <a href="dynamo-extraction.html">Next →</a>
+  <a href="tomo-reconstruction.html">← Back</a> | <a href="dynamo-bin8.html">Next →</a>
   <br><br>
   <a href=".">Home</a>
 </p>

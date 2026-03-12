@@ -5,10 +5,12 @@ layout: default
 # Subtomo averaging
 
 1. [Installation](installation.html)
+2. [Session setup](session-setup.html)
 2. [Tilt-series alignment and tomogram reconstruction](tomo-reconstruction.html)
 3. [Filament picking in imod](imod-picking.html)
-4. [Extraction of particles for Dynamo](dynamo-extraction.html)
-5. [Averaging and alignment in Dynamo](dynamo-average.html)
+4. [Dynamo: initial average at bin 8](dynamo-bin8.html)
+5. [Dynamo: refinement at bin 4](dynamo-bin4.html)
+6. [Relion: refinement](relion-refine.html)
 
 ---
 
