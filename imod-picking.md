@@ -34,30 +34,46 @@ layout: default
     - Press ```n``` to start a new filament
     - ```Shift + d``` to delete a filament
 
-8. After picking, save the model as ```XXX_filaments.mod``` (on ZaP window, press ```s```).
+8. After picking, save the model as  
+    ```$ROOT/warp/processing/reconstruction/$TOMONAME_filaments.mod```  
+    (on ZaP window, press ```s```).
 
-9. Add points between start-end coordinates and create a coordinate file:
+9. Add points between start-end coordinates and create a coordinate file:  
+    (First, make sure you have sourced the parameters file):
     ```shell
+    source params.sh
+    ```
+    ```shell
+    # Move to warp reconstruction folder
+    cd $ROOT/warp/processing/reconstruction
     # Add points between start-end, every 1 (binned) pixel
-    addModPts *_filaments.mod 1 
+    addModPts $TOMONAME'_filaments.mod' 1 
     # Convert to coordinate file
-    model2point -c XXX_filaments_PtsAdded.mod XXX_filaments_PtsAdded.coords
+    model2point -c $TOMONAME'_filaments.mod' $TOMONAME'_filaments_PtsAdded.coords'
     ```
     This will create the txt file with 4 columns: [filament_ID X Y Z]. The column order needs to be changed to [X Y Z filament_ID] with this command:
     ```bash
-    awk '{print $2, $3, $4, $1}' XXX_filaments_PtsAdded.coords > XXX_filaments_PtsAdded_XYZI.coords
+    awk '{print $2, $3, $4, $1}' $TOMONAME'_filaments_PtsAdded.coords' > $TOMONAME'_filaments_PtsAdded_XYZI.coords'
     ```
 
 10. Export particles with cryolo:
     ```shell
-    cryolo_boxmanager_tools.py coords2star -i *_XYZI.coords -o out_warp/ --scale 4 --apix 1.98 --mag 64000 --flipratio 0.5
+    cryolo_boxmanager_tools.py coords2star -i *_XYZI.coords -o out_warp/ --scale $RECBINNING --apix $ANGPIX --mag $MAGNIFICATION --flipratio 0.5
     ```
     In the output .star file, correct the name of the tomostar file:
     ```bash
-    sed -i 's/Position_91_3_ali_7p92Apx_filaments_PtsAdded_.tomostar/Position_91_3_ali.tomostar/g' out_warp/particles_warp.star
+    sed -i 's/'$TOMONAME'_filaments_PtsAdded_.tomostar/'$TOMONAME'_ali.tomostar/g' out_warp/particles_warp.star
     ```
     
-
+    Finally, add ```_rlnHelicalTrackLengthAngst``` (a Relion parameter) to the starfile and save the result in ```$ROOT/warp```:
+    ```shell
+    conda activate tomotools
+    # Add tracklength
+    python $REPOSITORY/add_tracklength_to_star.py \
+    -i $ROOT/warp/processing/reconstruction/out_warp/particles_warp.star \
+    -o $ROOT/warp/particles_warp.star \
+    -d $(( $ANGPIX*$RECBINNING ))
+    ```
     
 End of filament picking!
 

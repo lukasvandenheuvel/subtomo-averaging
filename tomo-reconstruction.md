@@ -7,7 +7,7 @@ layout: default
 ---
 
 <p align="center">
-  <a href=".">← Back</a> | <a href="imod-picking.html">Next →</a>
+  <a href="installation.html">← Back</a> | <a href="imod-picking.html">Next →</a>
   <br><br>
   <a href=".">Home</a>
 </p>

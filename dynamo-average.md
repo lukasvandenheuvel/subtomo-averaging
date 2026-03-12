@@ -9,6 +9,8 @@ layout: default
 1. Move into ```warp/dynamo``` and create a project directory called ```dynamo_project_b8```:
 
     ```bash
+    source params.sh # if you hadn't done it yet
+    cd $ROOT/warp/dynamo
     mkdir dynamo_project_b8 && cd dynamo_project_b8
     cp ../particles_edit.tbl ./particles_edit.tbl
     mv ../filamentsData_ctf ./
@@ -16,9 +18,10 @@ layout: default
 
 
     With the dynamo software, randomize the azimuth (=rot) angle and make a first average:
-    ```matlab
+    ```shell
     dynamo
-
+    ```
+    ```matlab
     T = dread('particles_edit.tbl');
     T2 = dtrandomize_azimuth(T);
     dwrite(T2,'particles_edit_mod.tbl');
@@ -27,12 +30,12 @@ layout: default
     dwrite(oa.average,'raw_template_ctf.em');
     ```
 
-    Check the output volume ```raw_template_ctf.em``` in ChimeraX. In ChimeraX, don't forget to flip the volume:
+    Check the output volume ```raw_template_ctf.em``` in ChimeraX. In ChimeraX, don't forget to flip the volume:  
     ```vop scale #1 factor -1```
 
     ![Dynamo average](imgs/dynamo-01.png "Dynamo average")
 
-## Aligned tube at bin 8
+## Particle alignment at bin 8
 
 2. Generate a new dynamo project with the tube as a template:
     ```matlab
@@ -105,6 +108,7 @@ layout: default
 9. When you see helical symmetry in your average, search for that symmetry:
 
     ```bash
+    cd $ROOT/warp/dynamo/dynamo_project_b8
     # Copy the volume and tbl file of the last iteration to your dynamo project folder
     cp bin8_align_1/results/ite_0004/averages/average_ref_001_ite_0004.em ./
     cp bin8_align_1/results/ite_0004/averages/refined_table_ref_001_ite_0004.tbl ./
@@ -125,14 +129,19 @@ layout: default
 ## Gold-standard refinement at bin 8
 
 10. To generate two half particle sets fo the gold-standard FSC calculation, we need to make sure that particles originating from the same filament end up in different particle sets.  
-    ```
-    Wen-Lu's ipynb to generate 2 half-sets
-    ```
-
-11. Create a new dynamo project:  
-    ```matlab
-    dynamo
+    ```shell
+    cd $REPOSITORY
     
+    python generate_goldstandard_tbl.py --i $ROOT/warp/dynamo/dynamo_project_b8/refined_table_ref_001_ite_0004.tbl
+    ```
+    This will generate a new file, ```refined_table_ref_001_ite_0004_mod.tbl```, where particles of different filaments are listed in an alternating fashion.
+
+11. Create a new dynamo project in ```dynamo_project_b8```:  
+    ```shell
+    cd $ROOT/warp/dynamo/dynamo_project_b8
+    dynamo
+    ```
+    ```matlab
     dcp.new('abp_align', 'd', 'filamentsData_ctf','template','average_ref_001_ite_0004_sym.em','masks','default','t','refined_table_ref_001_ite_0004_mod.tbl');
     ```
 
@@ -164,7 +173,7 @@ layout: default
     | shift limits                  | 4 4 2      |
     | shift limiting way            | 4          |
 
-    You can apply helical symmetry, but note that the sign of the twist is opposite of that in Relion, and that the rise is defined in *pixels*, not in Angstrom.
+    You can apply helical symmetry, but **note that the sign of the twist is opposite of that in Relion, and that the rise is defined in *pixels*, not in Angstrom**.
 
     Now, adopt 2 references and particle sets:
     - multireferece > adaptive filtering..... > Derive a project
@@ -184,6 +193,99 @@ layout: default
     ```
     ./abp_align_eo.exe
     ```
+
+## Particle alignment at bin 4
+
+12. Now, convert the refined tbl files to star files for warp exports:
+
+    ```shell
+    python convert_tbl_to_warp.py \
+    -r $ROOT/warp \
+    -t1 dynamo/dynamo_project_b8/abp_align_eo/results/ite_0004/averages/refined_table_ref_001_ite_0004.tbl \
+    -t2 dynamo/dynamo_project_b8/abp_align_eo/results/ite_0004/averages/refined_table_ref_002_ite_0004.tbl \
+    -w particles_warp.star \
+    -o particles_dynamo_b4.star \
+    -a $ANGPIX \
+    -b 8 # binning of the reference (at bin8) 
+    ```
+
+13. Do the warp export:
+    ```shell
+    # Compute angpix binned by 4 and box diameter (floor)
+    ANGPIX_BIN4=$(echo "$ANGPIX * 4" | bc)
+    BOXDIM=$(awk "BEGIN { print int($ANGPIX_BIN4 * $BOXSIZE) }")
+    # Export particles
+    cd $ROOT/warp
+    WarpTools ts_export_particles \
+    --settings warp_tiltseries.settings \
+    --input_star particles_dynamo_b4.star \
+    --output_star relion3_b4_particles.star \
+    --coords_angpix $ANGPIX \
+    --output_angpix $ANGPIX_BIN4 \
+    --box $BOXSIZE \
+    --diameter $BOXDIM \
+    --relative_output_paths \
+    --3d \
+    --output_processing bin_4_3d
+    ```
+    Then convert the warptools to a table:
+    ```shell
+    cd $REPOSITORY
+    conda activate tomotools
+    python3 convert_warp_to_tbl.py \
+    -r $ROOT/warp \
+    -i particles_dynamo_b4.star relion3_b4_particles.star \
+    -o relion3_b4/particles_merged.star \
+    -t processing/tomostar/$TOMONAME'_ali.tomostar' \
+    -bs $BOXSIZE -b 4
+    ```
+    And subsequently the CTF correction:
+
+    ```bash
+    python3 correct_ctf_subtomo.py \
+    -r $ROOT/warp \
+    -s relion3_b4_particles_merged.star \
+    -t dynamo/particles_b4_edit.tbl \
+    -o dynamo/filamentsData_b4_ctf/ \
+    --bpf 0.002 0.5 \
+    --ctf_method wiener \
+    --wiener_epsilon 0.1 \
+    --nproc 54 
+    ```
+    Now, generate the ```dynamo_project_b4``` directory and copy the files there:
+    ```bash
+    cd $ROOT/warp/dynamo
+    mkdir dynamo_project_b4 && cd dynamo_project_b4
+    cp ../particles_b4_edit.tbl ./particles_b4_edit.tbl
+    mv ../filamentsData_b4_ctf ./
+    ```
+14. You are ready to create a dynamo average here:
+    ```bash
+    dynamo
+    ```
+    ```matlab
+    oa=daverage('filamentsData_b4_ctf','t','particles_b4_edit.tbl','mw',50);
+    dwrite(oa.average,'raw_template.em');
+    ```
+    The twist should be visible, so you can search it:
+    ```shell
+    e2proc3d.py --mult=-1 raw_template.em raw_template.mrc
+    relion_image_handler --i raw_template.mrc --o raw_template.mrc --force_header_angpix $ANGPIX_BIN4
+    relion_helix_toolbox --i raw_template.mrc --twist_min 1 --twist_max 1.9 --rise_min 4.75 --rise_max 4.8 --z_percentage 0.3 --search --cyl_outer_diameter 200 --angpix $ANGPIX_BIN4
+    ```
+    Below, set the twist and rise to the optima found above:
+    ```shell
+    # Apply symmetry
+    relion_helix_toolbox --i raw_template.mrc --twist 1.09 --rise 4.8 --z_percentage 0.3 --impose --cyl_outer_diameter 160 --angpix $ANGPIX_BIN4 --o raw_template_sym.mrc
+    # Convert back to .em with pixel size 1
+    relion_image_handler --i raw_template_sym.mrc --o raw_template_sym.mrc --force_header_angpix 1
+    e2proc3d.py --mult=-1 raw_template_sym.mrc raw_template_sym.em
+    ```
+15. Setup the dynamo project according to the following parameters:
+
+
+
+
 
 ---
 
