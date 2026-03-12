@@ -78,7 +78,6 @@ def write_star(file_path, header, df):
             f.write(line if line.endswith('\n') else line + '\n')
         for i, col in enumerate(df.columns, start=1):
             f.write(f"{col} #{i}\n")
-        f.write('\n')
         df.to_csv(f, sep=' ', index=False, header=False, na_rep='0')
 
 ## -------------------------------------------------------------------- 

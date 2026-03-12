@@ -137,7 +137,7 @@ def edit_dynamo_tbl(dynamo_output, merged_star_file, min_tilt, max_tilt):
     print(f"Output written to: {output_tbl_file}")
 
 
-def merge_star_files(left_file, right_file, output_file, bin_left=1, bin_right=8, randomize_rot=False):
+def merge_star_files(left_file, right_file, output_file, bin_left=8, bin_right=1, randomize_rot=False):
     """
     Merge two STAR files by matching particles on their coordinates.
 
@@ -154,12 +154,12 @@ def merge_star_files(left_file, right_file, output_file, bin_left=1, bin_right=8
     print(f"Right file has {len(right_df)} particles")
 
     # Columns to bring from left, and how to rename them in output
-    left_col_map = {
+    right_col_map = {
         '_rlnAngleTiltPrior':          '_rlnAngleTilt',
         '_rlnAnglePsiPrior':           '_rlnAnglePsi',
         '_rlnAngleRotPrior':           '_rlnAngleRot'
     }
-    left_df = left_df.rename(columns=left_col_map)
+    right_df = right_df.rename(columns=right_col_map)
     
     # Sanity check: both files must have the same number of particles
     assert len(left_df) == len(right_df), \
@@ -253,9 +253,9 @@ if __name__ == "__main__":
     parser.add_argument(
         '-i', '--input',
         nargs=2,
-        metavar=('ANGLE_STARFILE', 'BINNED_STARFILE'),
+        metavar=('COORDINATES_STARFILE', 'ANGLES_STARFILE'),
         required=True,
-        help='Input STAR filenames (no paths): star file containing euler angles (1st) and binned particles file (2nd)'
+        help='Input STAR filenames (no paths): star file containing correct (binned) coordinates (1st) and file containing euler angles (2nd)'
     )
     
     parser.add_argument(
@@ -306,7 +306,7 @@ if __name__ == "__main__":
     tomostar_file = os.path.join(root_dir, args.tomostar) if args.tomostar else None
     box_size = args.box_size
     
-    merge_star_files(angles_starfile, binned_starfile, output_file, bin_left=1, bin_right=binning, randomize_rot=randomize_rot)
+    merge_star_files(angles_starfile, binned_starfile, output_file, bin_left=binning, bin_right=1, randomize_rot=randomize_rot)
     if tomostar_file:
         dynamo_output = os.path.join(root_dir, f'dynamo/particles_b{binning}')
         star_to_table(output_file, dynamo_output, tomostar_file, box_size)
