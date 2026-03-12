@@ -10,63 +10,8 @@ import argparse
 import random
 import subprocess
 import os
-
-
-def parse_star_file(filename):
-    """
-    Parse a STAR file and return header info and data lines.
-    
-    Returns:
-        header_lines: List of lines before the data section
-        column_names: List of column names in order
-        column_dict: Dictionary mapping column name to index
-        data_lines: List of data lines (as strings)
-        data_values: List of data lines split into values
-    """
-    with open(filename, 'r') as f:
-        lines = f.readlines()
-    
-    header_lines = []
-    column_names = []
-    column_dict = {}
-    data_lines = []
-    data_values = []
-    
-    in_loop = False
-    in_data = False
-    
-    for line in lines:
-        stripped = line.strip()
-        
-        # Track loop section
-        if stripped == 'loop_':
-            in_loop = True
-            header_lines.append(line)
-            continue
-        
-        # Parse column names
-        if in_loop and stripped.startswith('_'):
-            parts = stripped.split()
-            col_name = parts[0]
-            column_names.append(col_name)
-            # Column index in the dict (0-based)
-            column_dict[col_name] = len(column_names) - 1
-            header_lines.append(line)
-            continue
-        
-        # Data section starts
-        if in_loop and stripped and not stripped.startswith('_') and not stripped.startswith('#'):
-            in_data = True
-        
-        # Store data lines
-        if in_data:
-            if stripped:  # Skip empty lines in data section
-                data_lines.append(line)
-                data_values.append(stripped.split())
-        elif not in_data:
-            header_lines.append(line)
-    
-    return header_lines, column_names, column_dict, data_lines, data_values
+from utils import read_star, write_star
+import pandas as pd
 
 
 def parse_tomostar_file(filename):
@@ -119,29 +64,27 @@ def parse_tomostar_file(filename):
     return min(angles), max(angles)
 
 
-def edit_dynamo_tbl(tbl_file, merged_star_file, min_tilt, max_tilt):
+def edit_dynamo_tbl(dynamo_output, merged_star_file, min_tilt, max_tilt):
     """
     Edit the Dynamo .tbl file with specific column values and write to a new file.
     
     Args:
-        tbl_file: Path to particles.tbl file
+        dynamo_output: Path to particles (tbl) file (without .tbl extension)
         merged_star_file: Path to merged star file to get HelicalTubeID
         min_tilt: Minimum tilt angle (column 14)
         max_tilt: Maximum tilt angle (column 15)
     """
+    tbl_file = dynamo_output + '.tbl'
     print(f"\nReading {tbl_file}...")
     
     # Parse merged star file to get HelicalTubeID values
-    _, _, star_dict, _, star_data = parse_star_file(merged_star_file)
+    _, star_df = read_star(merged_star_file)
     
-    if '_rlnHelicalTubeID' not in star_dict:
+    if '_rlnHelicalTubeID' not in star_df.columns:
         print(f"ERROR: _rlnHelicalTubeID not found in {merged_star_file}")
         sys.exit(1)
     
-    tube_ids = []
-    for values in star_data:
-        tube_id = values[star_dict['_rlnHelicalTubeID']]
-        tube_ids.append(tube_id)
+    tube_ids = star_df['_rlnHelicalTubeID'].tolist()
     
     # Read tbl file
     with open(tbl_file, 'r') as f:
@@ -181,7 +124,7 @@ def edit_dynamo_tbl(tbl_file, merged_star_file, min_tilt, max_tilt):
         particle_idx += 1
     
     # Write to new tbl file (particles_edit.tbl)
-    output_tbl_file = os.path.join(os.path.dirname(tbl_file), 'particles_edit.tbl')
+    output_tbl_file = os.path.join(dynamo_output+'_edit.tbl')
     with open(output_tbl_file, 'w') as f:
         f.writelines(output_lines)
     
@@ -194,206 +137,105 @@ def edit_dynamo_tbl(tbl_file, merged_star_file, min_tilt, max_tilt):
     print(f"Output written to: {output_tbl_file}")
 
 
-def merge_star_files(warp_file, bin8_file, output_file, binning=8, randomize_rot=False, tomostar_file=None, box_size=64):
+def merge_star_files(left_file, right_file, output_file, bin_left=1, bin_right=8, randomize_rot=False):
     """
-    Merge columns from warp_file into bin8_file, then run warp2dynamo and edit the output.
-    
-    Args:
-        warp_file: Path to particles_warp.star file
-        bin8_file: Path to binned particles STAR file
-        output_file: Path to output merged STAR file
-        binning: Binning factor (default: 8)
-        randomize_rot: If True, randomize _rlnAngleRot values between -180 and 180 (default: False)
-        tomostar_file: Path to tomostar file for extracting tilt angles (optional)
-        box_size: Box size for warp2dynamo (default: 64)
+    Merge two STAR files by matching particles on their coordinates.
+
+    Coordinates are normalised to bin-1 pixel space (coord * bin_factor) before
+    matching.  Columns from left_file are merged into right_file.
+    _rlnAngleTiltPrior / _rlnAnglePsiPrior are renamed to _rlnAngleTilt / _rlnAnglePsi.
+    A new _rlnAngleRot column is appended.
     """
-    print(f"Reading {warp_file}...")
-    warp_header, warp_cols, warp_dict, warp_lines, warp_data = parse_star_file(warp_file)
+    print(f"Reading {left_file}...")
+    _, left_df = read_star(left_file)
+    print(f"Reading {right_file}...")
+    _, right_df = read_star(right_file)
+    print(f"Left file has {len(left_df)} particles")
+    print(f"Right file has {len(right_df)} particles")
+
+    # Columns to bring from left, and how to rename them in output
+    left_col_map = {
+        '_rlnAngleTiltPrior':          '_rlnAngleTilt',
+        '_rlnAnglePsiPrior':           '_rlnAnglePsi',
+        '_rlnAngleRotPrior':           '_rlnAngleRot'
+    }
+    left_df = left_df.rename(columns=left_col_map)
     
-    print(f"Reading {bin8_file}...")
-    bin8_header, bin8_cols, bin8_dict, bin8_lines, bin8_data = parse_star_file(bin8_file)
-    
-    print(f"Warp file has {len(warp_data)} particles")
-    print(f"Bin8 file has {len(bin8_data)} particles")
-    
-    # Columns to merge from warp file (with original names)
-    columns_from_warp = [
-        '_rlnHelicalTubeID',
-        '_rlnAngleTiltPrior',
-        '_rlnAnglePsiPrior',
-        '_rlnAnglePsiFlipRatio'
-    ]
-    
-    # Output column names (renamed)
-    columns_to_output = [
-        '_rlnHelicalTubeID',
-        '_rlnAngleTilt',
-        '_rlnAnglePsi',
-        '_rlnAnglePsiFlipRatio',
-        '_rlnAngleRot'
-    ]
-    
-    # Check if columns exist in warp file
-    for col in columns_from_warp:
-        if col not in warp_dict:
-            print(f"ERROR: Column {col} not found in {warp_file}")
-            sys.exit(1)
-    
-    # Check if columns already exist in bin8 file
-    for col in columns_to_output:
-        if col in bin8_dict:
-            print(f"WARNING: Column {col} already exists in {bin8_file}, will be overwritten")
-    
-    # Match particles by coordinates (binned coords * binning should equal warp coords)
-    # We'll match based on binned coordinates to handle rounding
-    print(f"Matching particles with binning factor {binning}...")
-    
-    # Build a lookup dict for warp particles
-    warp_lookup = {}
-    for i, values in enumerate(warp_data):
-        # Extract coordinates from warp file
-        x = float(values[warp_dict['_rlnCoordinateX']])
-        y = float(values[warp_dict['_rlnCoordinateY']])
-        z = float(values[warp_dict['_rlnCoordinateZ']])
-        
-        # Bin them to match binned coordinates
-        binned_x = round(x / binning, 3)
-        binned_y = round(y / binning, 3)
-        binned_z = round(z / binning, 3)
-        
-        key = (binned_x, binned_y, binned_z)
-        warp_lookup[key] = values
-    
-    # Prepare output
-    print("Merging columns...")
-    
-    # Update header with new columns
-    new_column_names = bin8_cols.copy()
-    next_col_num = len(bin8_cols) + 1
-    
-    for col in columns_to_output:
-        if col not in bin8_dict:
-            new_column_names.append(col)
-    
-    # Write header
-    output_lines = []
-    
-    # Copy non-column header lines
-    for line in bin8_header:
-        if line.strip().startswith('_'):
-            break
-        output_lines.append(line)
-    
-    # Write updated column definitions
-    for i, col_name in enumerate(new_column_names, start=1):
-        output_lines.append(f"{col_name} #{i}\n")
-    
-    # Process data lines
-    matched = 0
-    unmatched = 0
-    
-    for bin8_values in bin8_data:
-        # Get bin8 coordinates
-        x = float(bin8_values[bin8_dict['_rlnCoordinateX']])
-        y = float(bin8_values[bin8_dict['_rlnCoordinateY']])
-        z = float(bin8_values[bin8_dict['_rlnCoordinateZ']])
-        
-        key = (round(x, 3), round(y, 3), round(z, 3))
-        
-        # Look up matching warp particle
-        if key in warp_lookup:
-            warp_values = warp_lookup[key]
-            matched += 1
-            
-            # Build output line with merged columns
-            output_values = bin8_values.copy()
-            
-            # Add columns from warp file (with renaming)
-            for i, col_out in enumerate(columns_to_output):
-                if col_out not in bin8_dict:  # Only add if not already present
-                    if i < len(columns_from_warp):  # Columns from warp file
-                        col_warp = columns_from_warp[i]
-                        col_idx = warp_dict[col_warp]
-                        output_values.append(warp_values[col_idx])
-                    else:  # New column _rlnAngleRot
-                        if randomize_rot:
-                            angle_rot = random.uniform(-180, 180)
-                            output_values.append(f"{angle_rot:.6f}")
-                        else:
-                            output_values.append("0.0")
-            
-            # Format and write line
-            output_line = "  " + "  ".join(f"{val:>12}" if i < 3 else f"{val:>10}" 
-                                           for i, val in enumerate(output_values)) + "\n"
-            output_lines.append(output_line)
+    # Sanity check: both files must have the same number of particles
+    assert len(left_df) == len(right_df), \
+        f"Particle count mismatch: left={len(left_df)}, right={len(right_df)}"
+
+    # Verify coordinate correspondence by index
+    coord_axes = ['_rlnCoordinateX', '_rlnCoordinateY', '_rlnCoordinateZ']
+    left_coords = left_df[coord_axes].astype(float).values * bin_left
+    right_coords = right_df[coord_axes].astype(float).values * bin_right
+    dists = ((left_coords - right_coords) ** 2).sum(axis=1) ** 0.5
+    max_dist = dists.max()
+    print(f"Coordinate check: max distance = {max_dist:.4f} px (bin-1 space)")
+    bad = dists > 0.1
+    if bad.any():
+        n_bad = int(bad.sum())
+        print(f"WARNING: {n_bad} particles exceed 0.1 px distance:")
+        for i in bad.nonzero()[0][:10]:
+            print(f"  row {i}: left={left_coords[i]}  right={right_coords[i]}  dist={dists[i]:.4f}")
+
+    # Merge by index: left columns take priority, add right-only columns
+    right_only_cols = [c for c in right_df.columns if c not in left_df.columns]
+    merged = pd.concat([left_df.reset_index(drop=True),
+                        right_df[right_only_cols].reset_index(drop=True)], axis=1)
+
+    # Add _rlnAngleRot
+    if '_rlnAngleRot' not in merged.columns:
+        if randomize_rot:
+            merged['_rlnAngleRot'] = [f"{random.uniform(-180, 180):.6f}" for _ in range(len(merged))]
         else:
-            unmatched += 1
-            print(f"WARNING: No match found for bin8 particle at ({x}, {y}, {z})")
-            
-            # Still write the line but with placeholder values
-            output_values = bin8_values.copy()
-            for col in columns_to_output:
-                if col not in bin8_dict:
-                    output_values.append("0.0")
-            
-            output_line = "  " + "  ".join(f"{val:>12}" if i < 3 else f"{val:>10}" 
-                                           for i, val in enumerate(output_values)) + "\n"
-            output_lines.append(output_line)
-    
-    # Write output file
-    print(f"Writing {output_file}...")
-    with open(output_file, 'w') as f:
-        f.writelines(output_lines)
-    
-    print(f"Done! Matched {matched} particles, {unmatched} unmatched")
+            merged['_rlnAngleRot'] = '0.0'
+
+    print(f"Merged {len(merged)} particles")
+
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    write_star(output_file, ["data_particles\n", "\n", "loop_\n"], merged)
     print(f"Output written to: {output_file}")
-    
-    # Run warp2dynamo if tomostar file is provided
-    if tomostar_file:
-        print(f"\nRunning warp2dynamo...")
-        
-        # Determine output directory and base name
-        output_dir = os.path.dirname(output_file)
-        # Create dynamo directory in the same location as output file
-        dynamo_dir = os.path.join(output_dir, 'dynamo')
-        os.makedirs(dynamo_dir, exist_ok=True)
-        
-        dynamo_output = os.path.join(dynamo_dir, 'particles')
-        
-        # Remove all existing output files to avoid conflicts
-        import glob
-        for existing_file in glob.glob(os.path.join(dynamo_dir, 'particles*')):
-            print(f"Removing existing file: {existing_file}")
-            os.remove(existing_file)
-        
-        # Run warp2dynamo command
-        cmd = ['warp2dynamo', '-i', output_file, '-o', dynamo_output, '-bs', str(box_size)]
-        print(f"Command: {' '.join(cmd)}")
-        
-        try:
-            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-            print("warp2dynamo completed successfully")
-            if result.stdout:
-                print(result.stdout)
-        except subprocess.CalledProcessError as e:
-            print(f"ERROR: warp2dynamo failed with return code {e.returncode}")
-            print(f"STDERR: {e.stderr}")
-            sys.exit(1)
-        except FileNotFoundError:
-            print("ERROR: warp2dynamo command not found. Make sure it's in your PATH.")
-            sys.exit(1)
-        
-        # Parse tomostar file for tilt angles
-        print(f"\nParsing {tomostar_file}...")
-        min_tilt, max_tilt = parse_tomostar_file(tomostar_file)
-        print(f"Tilt angle range: {min_tilt:.2f} to {max_tilt:.2f}")
-        
-        # Edit the dynamo tbl file
-        tbl_file = dynamo_output + '.tbl'
-        if os.path.exists(tbl_file):
-            edit_dynamo_tbl(tbl_file, output_file, min_tilt, max_tilt)
-        else:
-            print(f"WARNING: Expected output file {tbl_file} not found")
+
+
+def star_to_table(output_file, dynamo_output, tomostar_file, box_size=64):
+    """
+    Convert a merged STAR file to a Dynamo .tbl using warp2dynamo, then
+    annotate the table with the tilt-angle range and helical tube IDs.
+    """
+    import glob
+
+    print(f"\nRunning warp2dynamo...")
+    os.makedirs(os.path.dirname(dynamo_output), exist_ok=True)
+
+    for existing_file in glob.glob(dynamo_output+'*'):
+        print(f"Removing existing file: {existing_file}")
+        os.remove(existing_file)
+
+    cmd = ['warp2dynamo', '-i', output_file, '-o', dynamo_output, '-bs', str(box_size)]
+    print(f"Command: {' '.join(cmd)}")
+    try:
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        print("warp2dynamo completed successfully")
+        if result.stdout:
+            print(result.stdout)
+    except subprocess.CalledProcessError as e:
+        print(f"ERROR: warp2dynamo failed with return code {e.returncode}")
+        print(f"STDERR: {e.stderr}")
+        sys.exit(1)
+    except FileNotFoundError:
+        print("ERROR: warp2dynamo command not found. Make sure it's in your PATH.")
+        sys.exit(1)
+
+    print(f"\nParsing {tomostar_file}...")
+    min_tilt, max_tilt = parse_tomostar_file(tomostar_file)
+    print(f"Tilt angle range: {min_tilt:.2f} to {max_tilt:.2f}")
+
+    tbl_file = dynamo_output + '.tbl'
+    if os.path.exists(tbl_file):
+        edit_dynamo_tbl(dynamo_output, output_file, min_tilt, max_tilt)
+    else:
+        print(f"WARNING: Expected output file {tbl_file} not found")
 
 
 if __name__ == "__main__":
@@ -411,9 +253,9 @@ if __name__ == "__main__":
     parser.add_argument(
         '-i', '--input',
         nargs=2,
-        metavar=('WARP_FILE', 'BINNED_FILE'),
+        metavar=('ANGLE_STARFILE', 'BINNED_STARFILE'),
         required=True,
-        help='Input STAR filenames (no paths): particles_warp.star and binned particles file'
+        help='Input STAR filenames (no paths): star file containing euler angles (1st) and binned particles file (2nd)'
     )
     
     parser.add_argument(
@@ -456,12 +298,15 @@ if __name__ == "__main__":
     
     # Construct full paths from root directory and filenames
     root_dir = args.root
-    warp_file = os.path.join(root_dir, args.input[0])
-    bin8_file = os.path.join(root_dir, args.input[1])
+    angles_starfile = os.path.join(root_dir, args.input[0])
+    binned_starfile = os.path.join(root_dir, args.input[1])
     output_file = os.path.join(root_dir, args.output)
     binning = args.binning
     randomize_rot = args.randomize_rot
     tomostar_file = os.path.join(root_dir, args.tomostar) if args.tomostar else None
     box_size = args.box_size
     
-    merge_star_files(warp_file, bin8_file, output_file, binning, randomize_rot, tomostar_file, box_size)
+    merge_star_files(angles_starfile, binned_starfile, output_file, bin_left=1, bin_right=binning, randomize_rot=randomize_rot)
+    if tomostar_file:
+        dynamo_output = os.path.join(root_dir, f'dynamo/particles_b{binning}')
+        star_to_table(output_file, dynamo_output, tomostar_file, box_size)

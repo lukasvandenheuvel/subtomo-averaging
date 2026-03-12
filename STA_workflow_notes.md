@@ -114,13 +114,6 @@
     Check in ChimeraX, don't forget to flip the volume:
     ```chimerax vop scale #1 factor -1```
 
-5. Copy the particles_edit_mod.tbl, giving it the same name as the tomogram:
-
-    ```
-    cp particles_edit_mod.tbl Position_91_3_8.00Apx.tbl
-    ```
-
-6. Back in Scipion, import the subtomos from tbl with a ```tomo - import coordinates 3D``` job.
 
 7. Relion extraction:
     - Start a Relion extraction job (do not use the queue)

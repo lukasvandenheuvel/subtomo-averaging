@@ -2,7 +2,8 @@
 # make particles.tbl from warp star file and reconstructed .mrc file
 # ------------------------------------------------------------------
 
-import os, subprocess, numpy as np, pandas as pd, mrcfile, argparse, re
+import os, numpy as np, pandas as pd, mrcfile, argparse, re
+from utils import read_star, write_em_via_mrc
 from multiprocessing import Pool, cpu_count
 
 def bandpass_filter(vol, pixel_size, low_f, high_f):
@@ -29,43 +30,6 @@ def bandpass_filter(vol, pixel_size, low_f, high_f):
 
     return np.real(filtered)
 
-# ------------ helpers --------------------------------------------------------
-def write_em_via_mrc(tmp_mrc: str, out_em: str):
-    """Call EMAN2 to convert an MRC volume to EM."""
-    subprocess.run(['e2proc3d.py', '--mult=-1', tmp_mrc, out_em], check=True, stdout=subprocess.DEVNULL)
-
-def read_star(file_path):
-    """
-    Reads a STAR file, automatically detecting column headers and data rows.
-    Returns a DataFrame with proper column names from the STAR file.
-    """
-    with open(file_path, 'r') as f:
-        all_lines = f.readlines()
-    
-    # Find the column definitions (lines starting with _rln)
-    column_names = []
-    data_start_idx = 0
-    
-    for i, line in enumerate(all_lines):
-        stripped = line.strip()
-        if stripped.startswith('_rln'):
-            # Extract column name (e.g., "_rlnImageName #1" -> "_rlnImageName")
-            col_name = stripped.split()[0]
-            column_names.append(col_name)
-        elif stripped and not stripped.startswith('#') and column_names:
-            # First data line after column definitions
-            data_start_idx = i
-            break
-    
-    # Read data lines
-    data_lines = all_lines[data_start_idx:]
-    data_lines = [line.strip() for line in data_lines if line.strip() and not line.startswith('#')]
-    
-    # Create DataFrame with column names
-    data = [line.split() for line in data_lines]
-    df = pd.DataFrame(data, columns=column_names)
-    
-    return df
 
 # ------------ configuration --------------------------------------------------
 
@@ -169,7 +133,7 @@ if __name__ == '__main__':
 
     # ------------ pre-processing (single-thread) --------------------------------- might change!!
     print(f'Reading STAR file: {warp_file}')
-    warp_df = read_star(warp_file)
+    _, warp_df = read_star(warp_file)
     
     # Read pixel size from star file
     pixel_size = float(warp_df['_rlnPixelSize'].iloc[0])

@@ -38,6 +38,14 @@ WarpTools ts_reconstruct --settings warp_tiltseries.settings --angpix 7.92 --don
 
 ---in Imod: do picking---
 
+addModPts yourxxx.mod 1 
+
+model2point –c your_PtsAdded.mod output.coords # for 3D pipeline
+
+model2point your_PtsAdded.mod output_2D.coords  # for 2D pipeline
+
+cryolo_boxmanager_tools.py coords2star –i your.coords -o ./ --apix 2.42 --mag 53000 –flipratio 0.5 --scale 4 
+
 # Export particles:
 
 cryolo_boxmanager_tools.py coords2star -i Position_47_2_ali_clean.coords -o out_warp/ --scale 4 --apix 1.98 --mag 64000 --flipratio 0.5
@@ -135,11 +143,11 @@ wb = dread("myPCA.PCA");
 Generate mask: (masks > mask Editor)
 - cylinder
 - r = 15
-- height 50%
+- height 50 (= 50 pixels)
 - gaussian 3
 "create mask" and view
 Transfer mask to wizard > alignment, classification, FCS (one by one)
-Close, hit "fill with ones" for Fourier and Fourier shell mask
+Close, hit "fill with ones" for Fourier mask ONLY
 
 Numerical parameters:
 
@@ -152,8 +160,8 @@ Refine: 2; refine factor: 2
 High/low‐pass: 2/25 Fourier pixels (→50 Å at iteration 1)
 symmetry: c1
 Particle dimensions: set to box size
-Shift limits: [5 5 2] px; limiting way: 4
-advance enable coneflip 2
+Shift limits: [4 4 2] px; limiting way: 4
+advance enable coneflip 2 (leave azimuth to 0)
 Boxsisize 64
 
 
@@ -166,8 +174,8 @@ In‐plane (azimuth): range 45°, sampling 5°
 Refine: 2; refine factor: 2
 High/low‐pass: 2/25 Fourier pixels (→50 Å at iteration 1)
 symmetry: c1
-Shift limits: [5 5 2] px; limiting way: 4
-advance enable coneflip 2
+Shift limits: [4 4 2] px; limiting way: 4
+advance enable coneflip 2 (leave azimuth to 0)
 Boxsisize 64
 
 
@@ -194,8 +202,8 @@ sed -i 's/srun  1 dynamo/srun -n 1 dynamo/g; s/srun  50 dynamo/srun -n 50 dynamo
 dtplot(ttt((ttt(:,23)==2),:),'m','rays')
 dtplot(ttt((ttt(:,23)==2),:),'pf','oriented_positions')
 
-cp bin4_align_1/results/ite_0004/averages/average_ref_001_ite_0004.em ./
-cp bin4_align_1/results/ite_0004/averages/refined_table_ref_001_ite_0004.tbl ./
+cp bin8_align_1/results/ite_0004/averages/average_ref_001_ite_0004.em ./
+cp bin8_align_1/results/ite_0004/averages/refined_table_ref_001_ite_0004.tbl ./
 
 ###### when you can see the helical from average
 
@@ -203,7 +211,7 @@ e2proc3d.py --mult=-1 average_ref_001_ite_0004.em average_ref_001_ite_0004.mrc
 relion_image_handler --i average_ref_001_ite_0004.mrc --o average_ref_001_ite_0004.mrc --force_header_angpix 15.84
 
 relion_helix_toolbox --i average_ref_001_ite_0004.mrc --twist_min 0.5 --twist_max 2 --rise_min 4.5 --rise_max 4.9 --z_percentage 0.3 --search --cyl_outer_diameter 200 --angpix 15.84
-relion_helix_toolbox --i average_ref_001_ite_0004.mrc --twist 1.37 --rise 4.87 --z_percentage 0.3 --impose --cyl_outer_diameter 200 --angpix 15.84 --o average_ref_001_ite_0004_sym.mrc
+relion_helix_toolbox --i average_ref_001_ite_0004.mrc --twist 1.01 --rise 4.8 --z_percentage 0.3 --impose --cyl_outer_diameter 200 --angpix 15.84 --o average_ref_001_ite_0004_sym.mrc
 relion_image_handler --i average_ref_001_ite_0004_sym.mrc --o average_ref_001_ite_0004_sym.mrc --force_header_angpix 1
 e2proc3d.py --mult=-1 average_ref_001_ite_0004_sym.mrc average_ref_001_ite_0004_sym.em
 
@@ -220,15 +228,6 @@ r ~12
 height 30
 Gaussian 3
 
-multireferece > adaptive filtering..... > Derive a project (this generates a new project with 2 references and particle sets)
-
-
-dcp abp_align_eo
-
-
-adative parameter threshold 0.143, low pass resultion at 25, push back = 0
-(do not hit swap particles)
-
 Setting numeric:
 round 1
 Iterations: 4
@@ -243,9 +242,19 @@ advance enable coneflip 2, azmuthflip 2
 Boxsisize 64
 
 
+multireferece > adaptive filtering..... > Derive a project (this generates a new project with 2 references and particle sets)
+
+Change project name to abp_align_eo
+
+multireferece > adaptive filtering > Edit for adaptive run
+adative parameter threshold 0.143, low pass resultion at 25, push back = 0
+(do not hit swap particles)
+
+Check, unfold, run.
+
 
 extract in bin4 in warp
-generate .tbl and .em file from bin4 output
+generate .tbl and .em file from bin4 output: use ipynb "# Generating star files for warp in bin4"
 
 
 mkdir dynamo_project_b4 && cd dynamo_project_b4
