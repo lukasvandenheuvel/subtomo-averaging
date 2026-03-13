@@ -3,64 +3,95 @@ import subprocess
 
 def read_star(file_path):
     """
-    Reads a STAR file (relion4 and relion5 format).
+    Reads a STAR file (relion3/4/5 format).
 
-    For relion5 files with multiple data_ blocks, the last data_ block
-    (typically data_particles) is read as the DataFrame. Everything up to
-    and including the 'data_particles' / 'data_*' line and the subsequent
-    'loop_' line is stored as the header.
-
-    Returns:
+    For files with a single data_ block (relion3/4), returns:
         header: list of strings (lines up to and including 'loop_')
         df: DataFrame with column names from the STAR file
+
+    For files with multiple data_ blocks (relion5), returns:
+        headers: list of N headers (each a list of strings)
+        dfs: list of N DataFrames
     """
     with open(file_path, 'r') as f:
         all_lines = f.readlines()
 
-    # Find the last 'data_' block (relion5 may have data_optics + data_particles)
-    last_data_idx = None
-    for i, line in enumerate(all_lines):
-        if line.strip().startswith('data_'):
-            last_data_idx = i
+    # Find all data_ block start indices
+    data_indices = [i for i, line in enumerate(all_lines)
+                    if line.strip().startswith('data_')]
 
-    if last_data_idx is None:
+    if not data_indices:
         raise ValueError(f"No 'data_' block found in {file_path}")
 
-    # Find 'loop_' after the last data_ line
-    loop_idx = None
-    for i in range(last_data_idx, len(all_lines)):
-        if all_lines[i].strip() == 'loop_':
-            loop_idx = i
-            break
+    headers = []
+    dfs = []
 
-    if loop_idx is None:
-        raise ValueError(f"No 'loop_' found after last data_ block in {file_path}")
+    for block_num, data_idx in enumerate(data_indices):
+        # Block spans from this data_ line to the next (or EOF)
+        if block_num + 1 < len(data_indices):
+            block_end = data_indices[block_num + 1]
+        else:
+            block_end = len(all_lines)
 
-    # Header = everything up to and including 'loop_'
-    header = all_lines[:loop_idx + 1]
+        block_lines = all_lines[data_idx:block_end]
 
-    # Parse column names (lines starting with '_rln' after loop_)
-    column_names = []
-    data_start_idx = loop_idx + 1
-    for i in range(loop_idx + 1, len(all_lines)):
-        stripped = all_lines[i].strip()
-        if stripped.startswith('_'):
-            column_names.append(stripped.split()[0])
-            data_start_idx = i + 1
-        elif stripped and not stripped.startswith('#'):
-            data_start_idx = i
-            break
+        # Find loop_ within this block
+        loop_offset = None
+        for j, line in enumerate(block_lines):
+            if line.strip() == 'loop_':
+                loop_offset = j
+                break
 
-    # Read data lines
-    data_lines = [
-        line.strip() for line in all_lines[data_start_idx:]
-        if line.strip() and not line.strip().startswith('#')
-    ]
+        if loop_offset is not None:
+            # --- loop-style block ---
+            if block_num == 0:
+                header = all_lines[:data_idx] + block_lines[:loop_offset + 1]
+            else:
+                header = block_lines[:loop_offset + 1]
 
-    data = [line.split() for line in data_lines]
-    df = pd.DataFrame(data, columns=column_names)
+            column_names = []
+            data_start = loop_offset + 1
+            for j in range(loop_offset + 1, len(block_lines)):
+                stripped = block_lines[j].strip()
+                if stripped.startswith('_'):
+                    column_names.append(stripped.split()[0])
+                    data_start = j + 1
+                elif stripped and not stripped.startswith('#'):
+                    data_start = j
+                    break
 
-    return header, df
+            data_lines = [
+                line.strip() for line in block_lines[data_start:]
+                if line.strip() and not line.strip().startswith('#')
+            ]
+            data = [line.split() for line in data_lines]
+            df = pd.DataFrame(data, columns=column_names)
+        else:
+            # --- key-value block (no loop_) ---
+            if block_num == 0:
+                header = all_lines[:data_idx] + [block_lines[0]]
+            else:
+                header = [block_lines[0]]
+
+            column_names = []
+            values = []
+            for line in block_lines[1:]:
+                stripped = line.strip()
+                if stripped.startswith('_'):
+                    parts = stripped.split()
+                    column_names.append(parts[0])
+                    values.append(parts[1] if len(parts) > 1 else '')
+
+            df = pd.DataFrame([values], columns=column_names) if column_names else pd.DataFrame()
+
+        headers.append(header)
+        dfs.append(df)
+
+    # Single block: return header and df directly (backward compatible)
+    if len(headers) == 1:
+        return headers[0], dfs[0]
+
+    return headers, dfs
 
 
 def write_star(file_path, header, df):
@@ -70,15 +101,36 @@ def write_star(file_path, header, df):
 
     Args:
         file_path: output file path
-        header: list of strings returned by read_star (up to and including 'loop_')
-        df: DataFrame whose column names are the STAR column labels
+        header: list of strings or list of lists (for multi-block files)
+        df: DataFrame or list of DataFrames (for multi-block files)
     """
-    with open(file_path, 'w') as f:
-        for line in header:
-            f.write(line if line.endswith('\n') else line + '\n')
-        for i, col in enumerate(df.columns, start=1):
-            f.write(f"{col} #{i}\n")
-        df.to_csv(f, sep=' ', index=False, header=False, na_rep='0')
+    # Multi-block: header and df are both lists
+    if isinstance(df, list):
+        with open(file_path, 'w') as f:
+            for h, d in zip(header, df):
+                for line in h:
+                    f.write(line if line.endswith('\n') else line + '\n')
+                has_loop = any(l.strip() == 'loop_' for l in h)
+                if has_loop:
+                    for i, col in enumerate(d.columns, start=1):
+                        f.write(f"{col} #{i}\n")
+                    d.to_csv(f, sep=' ', index=False, header=False, na_rep='0')
+                else:
+                    for col in d.columns:
+                        f.write(f"{col}\t{d[col].iloc[0]}\n")
+                f.write('\n')
+    else:
+        with open(file_path, 'w') as f:
+            for line in header:
+                f.write(line if line.endswith('\n') else line + '\n')
+            has_loop = any(l.strip() == 'loop_' for l in header)
+            if has_loop:
+                for i, col in enumerate(df.columns, start=1):
+                    f.write(f"{col} #{i}\n")
+                df.to_csv(f, sep=' ', index=False, header=False, na_rep='0')
+            else:
+                for col in df.columns:
+                    f.write(f"{col}\t{df[col].iloc[0]}\n")
 
 ## -------------------------------------------------------------------- 
 def write_em_via_mrc(tmp_mrc: str, out_em: str):
