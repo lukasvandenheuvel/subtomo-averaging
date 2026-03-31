@@ -3,7 +3,7 @@ layout: default
 ---
 
 # Installation
-Below are the software 
+Below are the software used in this tutorial.
 
 ## Conda environment:
 - tomotools (https://github.com/tomotools/tomotools) 

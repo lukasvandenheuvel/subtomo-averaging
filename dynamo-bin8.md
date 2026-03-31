@@ -19,7 +19,7 @@ layout: default
     ANGPIX_BINNED=$(echo "$ANGPIX * 8" | bc)
     BOXDIM=$(awk "BEGIN { print int($ANGPIX_BINNED * $BOXSIZE) }")
     # Export particles
-    WarpTools ts_export_particles \ 
+    WarpTools ts_export_particles \
     --settings warp_tiltseries.settings \
     --input_star particles_warp.star \
     --output_star relion3_b8_particles.star \
@@ -70,10 +70,12 @@ layout: default
 
     ```bash
     source params.sh # if you hadn't done it yet
+    ```
+    ```bash
     cd $ROOT/warp/dynamo
-    mkdir dynamo_project_b8 && cd dynamo_project_b8
-    cp ../particles_edit.tbl ./particles_edit.tbl
-    mv ../filamentsData_ctf ./
+    mkdir -p dynamo_project_b8 && cd dynamo_project_b8
+    cp ../particles_b8_edit.tbl ./particles_b8_edit.tbl
+    mv ../filamentsData_b8_ctf ./
     ```
 
 
@@ -82,11 +84,11 @@ layout: default
     dynamo
     ```
     ```matlab
-    T = dread('particles_edit.tbl');
+    T = dread('particles_b8_edit.tbl');
     T2 = dtrandomize_azimuth(T);
-    dwrite(T2,'particles_edit_mod.tbl');
+    dwrite(T2,'particles_b8_edit_mod.tbl');
     % Generate average (should be a tube)
-    oa = daverage('filamentsData_ctf','t','particles_edit_mod.tbl','mw',50);
+    oa = daverage('filamentsData_b8_ctf','t','particles_b8_edit_mod.tbl','mw',50);
     dwrite(oa.average,'raw_template_ctf.em');
     ```
 

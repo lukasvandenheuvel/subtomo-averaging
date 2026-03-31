@@ -72,7 +72,7 @@ layout: default
     python $REPOSITORY/add_tracklength_to_star.py \
     -i $ROOT/warp/processing/reconstruction/out_warp/particles_warp.star \
     -o $ROOT/warp/particles_warp.star \
-    -d $(( $ANGPIX*$RECBINNING ))
+    -d $(echo "$ANGPIX * $RECBINNING" | bc)
     ```
     
 End of filament picking!

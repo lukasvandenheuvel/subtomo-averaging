@@ -37,13 +37,57 @@ Although we will do the final reconstruction in Warp, we add this initial alignm
     sed -i 's/.eer/.tif/' $TOMONAME.mrc.mdoc
     ```
 
+5. Run the motion correction with tomotools
+
+    ```bash
+    conda activate tomotools
+    # Set motioncor executable
+    export MOTIONCOR_EXECUTABLE=$MOTIONCOR_EXECUTABLE
+    # Motion / gain correction
+    tomotools preprocess --mcbin 1 --frames ./frames_tiff/frames/ --gainref ./frames_tiff/gain-reference.mrc $TOMONAME.mrc ./ts-aligned/ 
+    ```
+
+6. Reconstruct the tomogram with tomotools
+
+    ```bash
+    tomotools reconstruct -d 3000 -b 4 --aretomo $TOMONAME.mrc
+    ```
+
+7. Export the tomotools alignment to warp
+    ```bash
+    cd $ROOT
+    mkdir warp
+    conda activate tomotools
+    ```
+    ```bash
+    tomotools aretomo2warp --v2 --frames-dir frames_tiff -n $TOMONAME ts-aligned warp
+    ```
+8. With the shell script, reconstruct the tiltseries with warp
+    ```bash
+    cd $ROOT/warp/$TOMONAME
+    $REPOSITORY/warp_reconstruction.sh $ANGPIX $FRAMEEXPOSURE $RECBINNING
+    ```
+9. Finally, move the warp output folders outside ```Position_XX```, to avoid confusion with the duplicate folder name.
+    ```bash
+    cd $ROOT/warp
+    mv $TOMONAME/* .
+    rm -r $TOMONAME
+    ```
+    And update all paths accordingly:
+    ```bash
+    cd $ROOT/warp/processing
+    sed -i 's|'$TOMONAME'/warp/'$TOMONAME'/frames|'$TOMONAME'/warp/frames|g' ${TOMONAME}_ali_sec_*.xml
+    ```
+
+
+Finally, the folder structure should look something like this:
 
 ```bash
 Position_XX_X
 │   • Position_XX_X.mrc # Raw tilt series
 │   • Position_XX_X.mrc.mdoc # Mdoc file
 │
-└───frames # Subfolder for individual frames
+└───frames # Subfolder for EER frames
 │       • Position_XX_X_001_-10.00_20251212_214747_EER.eer
 │       • Position_XX_X_002_-7.00_20251212_214827_EER.eer
 │       ...
@@ -51,16 +95,16 @@ Position_XX_X
 └───frames_tiff
 │   │   • gain-reference.mrc
 │   │
-│   └───frames
+│   └───frames # Subfolder for .tif frames
 │       │   • Position_XX_X_001_-10.00_20251212_214747_EER.tif
 │       │   • Position_XX_X_002_-7.00_20251212_214827_EER.tif
 │       │   ...
 │   
-└───ts-aligned
+└───ts-aligned # alignment and reconstruction by tomotools
 │   │   • file021.txt
 │   │   • file022.txt
 │
-└───warp
+└───warp # warp reconstruction
 │   │   • file021.txt
 │   │   • file022.txt
 ```
