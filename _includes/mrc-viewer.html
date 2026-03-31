@@ -1,0 +1,151 @@
+<script src="https://cdn.jsdelivr.net/npm/ngl@2.1.0/dist/ngl.js"></script>
+<div style="margin: 10px 0 6px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+  <label style="font-size:13px;">
+    Isolevel: <span id="isolevel-val-{{ include.id }}">{{ include.isolevel | default: 3.0 }}</span>
+    <input id="isolevel-slider-{{ include.id }}" type="range" min="0.1" max="10" step="0.1"
+      value="{{ include.isolevel | default: 3.0 }}" style="vertical-align:middle; width:140px;">
+  </label>
+</div>
+<div id="ngl-wrapper-{{ include.id }}" style="position:relative; width:100%; height:500px;">
+  <div id="ngl-viewport-{{ include.id }}" style="width:100%; height:100%; border:1px solid #ddd; border-radius:4px;"></div>
+  <div style="position:absolute; bottom:198px; right:10px; font-size:11px; color:#555;
+              background:rgba(255,255,255,0.88); padding:1px 6px; border-radius:3px 3px 0 0;
+              border:1px solid #bbb; border-bottom:none; pointer-events:none;">Side view</div>
+  <canvas id="sideview-{{ include.id }}" width="130" height="190"
+    style="position:absolute; bottom:8px; right:10px; background:rgba(255,255,255,0.93);
+           border:1px solid #bbb; border-radius:0 0 4px 4px; cursor:default; display:block;"></canvas>
+</div>
+<script>
+(function() {
+  var id = "{{ include.id }}";
+  var isolevel = {{ include.isolevel | default: 3.0 }};
+
+  var stage = new NGL.Stage("ngl-viewport-" + id, { backgroundColor: "white", clipCap: true });
+  var surfaceComp = null;
+
+  // Clip state as percentages 0-100
+  var clipNear = 0;
+  var clipFar  = 100;
+
+  stage.loadFile("{{ include.file }}", { ext: "mrc" }).then(function(comp) {
+    surfaceComp = comp;
+    comp.addRepresentation("surface", {
+      isolevel: isolevel,
+      color: "{{ include.color | default: '#cccccc' }}",
+      opacity: 1.0,
+      opaqueBack: true
+    });
+    comp.autoView();
+
+    // Rotate view 90° around X so the camera looks along Y instead of Z
+    var q = new stage.viewer.rotationGroup.quaternion.constructor(
+      Math.sin(Math.PI / 4), 0, 0, Math.cos(Math.PI / 4)
+    );
+    stage.viewerControls.rotate(q);
+  });
+
+  // Isolevel slider
+  document.getElementById("isolevel-slider-" + id).addEventListener("input", function() {
+    var val = parseFloat(this.value);
+    document.getElementById("isolevel-val-" + id).textContent = val.toFixed(1);
+    if (surfaceComp) surfaceComp.reprList[0].setParameters({ isolevel: val });
+  });
+
+  // ── Side-view canvas ───────────────────────────────────────────────────────
+  var canvas = document.getElementById("sideview-" + id);
+  var ctx    = canvas.getContext("2d");
+  var W = canvas.width, H = canvas.height;
+  var padX = 26, padTop = 20, padBot = 20;
+  var innerH = H - padTop - padBot;
+  var boxW  = W - 2 * padX;
+
+  function clipToY(c) { return padTop + (c / 100) * innerH; }
+  function yToClip(y) { return Math.max(0, Math.min(100, (y - padTop) / innerH * 100)); }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Depth box
+    ctx.fillStyle = "#e8eef5";
+    ctx.fillRect(padX, padTop, boxW, innerH);
+    ctx.strokeStyle = "#aab";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(padX, padTop, boxW, innerH);
+
+    // Front/back labels
+    ctx.fillStyle = "#888"; ctx.font = "9px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("front", W/2, padTop - 6);
+    ctx.fillText("back",  W/2, padTop + innerH + 13);
+
+    var yN = clipToY(clipNear), yF = clipToY(clipFar);
+
+    // Visible slab fill
+    ctx.fillStyle = "rgba(90,140,210,0.18)";
+    ctx.fillRect(padX, yN, boxW, yF - yN);
+
+    // Near clip (blue)
+    ctx.strokeStyle = "#3a7bd5"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(padX, yN); ctx.lineTo(padX + boxW, yN); ctx.stroke();
+    ctx.fillStyle = "#3a7bd5";
+    ctx.beginPath(); ctx.moveTo(padX - 2, yN - 5); ctx.lineTo(padX - 2, yN + 5); ctx.lineTo(padX + 9, yN); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#3a7bd5"; ctx.font = "bold 9px sans-serif"; ctx.textAlign = "right";
+    ctx.fillText(Math.round(clipNear) + "%", W - 1, yN + 3);
+
+    // Far clip (orange)
+    ctx.strokeStyle = "#e07b30"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(padX, yF); ctx.lineTo(padX + boxW, yF); ctx.stroke();
+    ctx.fillStyle = "#e07b30";
+    ctx.beginPath(); ctx.moveTo(padX - 2, yF - 5); ctx.lineTo(padX - 2, yF + 5); ctx.lineTo(padX + 9, yF); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#e07b30"; ctx.font = "bold 9px sans-serif"; ctx.textAlign = "right";
+    ctx.fillText(Math.round(clipFar) + "%", W - 1, yF + 3);
+  }
+
+  function applyClip() {
+    stage.setParameters({ clipNear: clipNear, clipFar: clipFar });
+    draw();
+  }
+
+  draw();
+
+  // Drag logic
+  var dragging = null;
+
+  function canvasY(e) {
+    var r = canvas.getBoundingClientRect();
+    return (e.clientY - r.top) * (H / r.height);
+  }
+  function hit(y) {
+    if (Math.abs(y - clipToY(clipNear)) < 9) return "near";
+    if (Math.abs(y - clipToY(clipFar))  < 9) return "far";
+    return null;
+  }
+
+  canvas.addEventListener("mousedown", function(e) {
+    dragging = hit(canvasY(e)); e.preventDefault();
+  });
+  window.addEventListener("mousemove", function(e) {
+    if (!dragging) return;
+    var v = yToClip(canvasY(e));
+    if (dragging === "near") clipNear = Math.min(v, clipFar - 2);
+    else                     clipFar  = Math.max(v, clipNear + 2);
+    applyClip();
+  });
+  window.addEventListener("mouseup", function() { dragging = null; });
+
+  canvas.addEventListener("touchstart", function(e) {
+    dragging = hit(canvasY(e.touches[0])); e.preventDefault();
+  }, { passive: false });
+  window.addEventListener("touchmove", function(e) {
+    if (!dragging) return;
+    var v = yToClip(canvasY(e.touches[0]));
+    if (dragging === "near") clipNear = Math.min(v, clipFar - 2);
+    else                     clipFar  = Math.max(v, clipNear + 2);
+    applyClip();
+  });
+  window.addEventListener("touchend", function() { dragging = null; });
+
+  canvas.addEventListener("mousemove", function(e) {
+    canvas.style.cursor = hit(canvasY(e)) ? "ns-resize" : "default";
+  });
+})();
+</script>

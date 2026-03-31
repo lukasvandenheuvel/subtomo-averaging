@@ -49,7 +49,7 @@ layout: default
     # Add points between start-end, every 1 (binned) pixel
     addModPts $TOMONAME'_filaments.mod' 1 
     # Convert to coordinate file
-    model2point -c $TOMONAME'_filaments.mod' $TOMONAME'_filaments_PtsAdded.coords'
+    model2point -c $TOMONAME'_filaments_PtsAdded.mod' $TOMONAME'_filaments_PtsAdded.coords'
     ```
     This will create the txt file with 4 columns: [filament_ID X Y Z]. The column order needs to be changed to [X Y Z filament_ID] with this command:
     ```bash

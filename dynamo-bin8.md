@@ -38,7 +38,9 @@ layout: default
     - Adds tilt, psi priors to relion3_bin8_particles.star
     - Convert to tbl with warp2dynamo
     - Edits tbl file to include min and max tilt angle and helical tube ID.
+
     ```shell
+    cd $REPOSITORY
     python3 convert_warp_to_tbl.py \
     -r $ROOT/warp \
     -i relion3_b8_particles.star particles_warp.star \
@@ -50,7 +52,7 @@ layout: default
 4. Do CTF correction of the extracted particles with ```correct_ctf_subtomo.py```:
     ```bash
     conda activate tomotools
-
+    cd $REPOSITORY
     python3 correct_ctf_subtomo.py \
     -r $ROOT/warp \
     -s relion3_b8_particles_merged.star \
@@ -85,10 +87,18 @@ layout: default
     ```
     ```matlab
     T = dread('particles_b8_edit.tbl');
+    ```
+    ```matlab
     T2 = dtrandomize_azimuth(T);
+    ```
+    ```matlab
     dwrite(T2,'particles_b8_edit_mod.tbl');
-    % Generate average (should be a tube)
+    ```
+    Generate average (should be a tube)
+    ```matlab
     oa = daverage('filamentsData_b8_ctf','t','particles_b8_edit_mod.tbl','mw',50);
+    ```
+    ```matlab
     dwrite(oa.average,'raw_template_ctf.em');
     ```
 
@@ -97,12 +107,15 @@ layout: default
 
     ![Dynamo average](imgs/dynamo-01.png "Dynamo average")
 
+    {% include mrc-viewer.html id="oa" file="volumes/dynamo-initial-oa.mrc" isolevel=3.0 %}
+
 ## Particle alignment at bin 8
 
 6. Generate a new dynamo project with the tube as a template:
     ```matlab
-    dcp.new('bin8_align_1', 'd', 'filamentsData_ctf','template','raw_template_ctf.em','masks','default','t','particles_edit_mod.tbl');
-
+    dcp.new('bin8_align_1', 'd', 'filamentsData_b8_ctf','template','raw_template_ctf.em','masks','default','t','particles_b8_edit_mod.tbl');
+    ```
+    ```matlab
     dcp bin8_align_1
     ```
 
