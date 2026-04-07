@@ -13,6 +13,7 @@ layout: default
     -w particles_dynamo_b4.star \
     -o particles_dynamo_b2.star \
     -a $ANGPIX \
+    -tm dynamo/particles_b4.reextract.doc \
     -b 4 # binning of the .tbl files (was bin4)
     ```
 

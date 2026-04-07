@@ -16,6 +16,7 @@ layout: default
     -w particles_warp.star \
     -o particles_dynamo_b4.star \
     -a $ANGPIX \
+    -tm dynamo/particles_b8.reextract.doc \
     -b 8 # binning of the reference (was bin8) 
     ```
 
@@ -38,7 +39,7 @@ layout: default
     --3d \
     --output_processing bin_4_3d
     ```
-    Then convert the warptools to a table:
+    Then convert the warp file to a table:
     ```shell
     cd $REPOSITORY
     conda activate tomotools
@@ -75,20 +76,30 @@ layout: default
     ```
     ```matlab
     oa=daverage('filamentsData_b4_ctf','t','particles_b4_edit.tbl','mw',50);
+    ```
+    ```matlab
     dwrite(oa.average,'raw_template.em');
     ```
     The twist should be visible, so you can search it:
     ```shell
     e2proc3d.py --mult=-1 raw_template.em raw_template.mrc
+    ```
+    ```shell
     relion_image_handler --i raw_template.mrc --o raw_template.mrc --force_header_angpix $ANGPIX_BIN4
+    ```
+    ```shell
     relion_helix_toolbox --i raw_template.mrc --twist_min 1 --twist_max 1.9 --rise_min 4.75 --rise_max 4.8 --z_percentage 0.3 --search --cyl_outer_diameter 200 --angpix $ANGPIX_BIN4
     ```
     Below, set the twist and rise to the optima found above:
     ```shell
     # Apply symmetry
     relion_helix_toolbox --i raw_template.mrc --twist 1.09 --rise 4.8 --z_percentage 0.3 --impose --cyl_outer_diameter 160 --angpix $ANGPIX_BIN4 --o raw_template_sym.mrc
+    ```
+    ```shell
     # Convert back to .em with pixel size 1
     relion_image_handler --i raw_template_sym.mrc --o raw_template_sym.mrc --force_header_angpix 1
+    ```
+    ```shell
     e2proc3d.py --mult=-1 raw_template_sym.mrc raw_template_sym.em
     ```
 15. Setup the dynamo project as below:
@@ -122,12 +133,29 @@ layout: default
     | refine factor                 | 2          |
     | high pass                     | 2          |
     | low                           | 25         |
-    | symmetry                      | c1 or h[-1.01,0.3]    |
+    | symmetry                      | c1 or h[-1.01,0.606]    |
     | particle dimensions           | 64         |
     | shift limits                  | 4 4 2      |
     | shift limiting way            | 4          |
 
+    You can apply helical symmetry, but **note that the sign of the twist is opposite of that in Relion, and that the rise is defined in *pixels*, not in Angstrom**.
 
+    Now, adopt 2 references and particle sets:
+    - multireferece > adaptive filtering..... > Derive a project
+    - change project name to abp_align_eo
+    - multireferece > adaptive filtering > Edit for adaptive run:
+
+        | Parameter    | Value      |
+        | --------     | -------    |
+        | threshold            | 0.143         |
+        | low-pass reolution            | 25         |
+        | push back     | 0          |  
+
+    Then check and unfold the project, and run the executable:
+
+    ```
+    ./abp_align_eo.exe
+    ```
 
 
 

@@ -6,15 +6,15 @@ layout: default
 
 ## Subtomogram extraction at bin 8 
 
-1. Move inside the ```$ROOT/warp``` directory.
+1. Source the params script.
     ```shell
     source params.sh
-    cd $ROOT/warp
     ```
     
 
 2. Export the subtomograms with ```WarpTools```:
     ```shell
+    cd $ROOT/warp
     # Compute angpix binned by 8 and box diameter (floor)
     ANGPIX_BINNED=$(echo "$ANGPIX * 8" | bc)
     BOXDIM=$(awk "BEGIN { print int($ANGPIX_BINNED * $BOXSIZE) }")
@@ -184,19 +184,33 @@ layout: default
 
     ```bash
     cd $ROOT/warp/dynamo/dynamo_project_b8
+    ```
+    ```bash
     # Copy the volume and tbl file of the last iteration to your dynamo project folder
     cp bin8_align_1/results/ite_0004/averages/average_ref_001_ite_0004.em ./
     cp bin8_align_1/results/ite_0004/averages/refined_table_ref_001_ite_0004.tbl ./
+    ```
+    ```bash
     # Convert .em volume to .mrc
     e2proc3d.py --mult=-1 average_ref_001_ite_0004.em average_ref_001_ite_0004.mrc
+    ```
+    ```bash
     # Set pixel size
     relion_image_handler --i average_ref_001_ite_0004.mrc --o average_ref_001_ite_0004.mrc --force_header_angpix 15.84
+    ```
+    ```bash
     # Search symmetry in Relion
     relion_helix_toolbox --i average_ref_001_ite_0004.mrc --twist_min 0.5 --twist_max 2 --rise_min 4.5 --rise_max 4.9 --z_percentage 0.3 --search --cyl_outer_diameter 200 --angpix 15.84
+    ```
+    ```bash
     # Impose symmetry to the average (change twist and rise to the optimal values from previous command)
     relion_helix_toolbox --i average_ref_001_ite_0004.mrc --twist 1.01 --rise 4.8 --z_percentage 0.3 --impose --cyl_outer_diameter 200 --angpix 15.84 --o average_ref_001_ite_0004_sym.mrc
+    ```
+    ```bash
     # Set pixel size back to 1 for Dynamo
     relion_image_handler --i average_ref_001_ite_0004_sym.mrc --o average_ref_001_ite_0004_sym.mrc --force_header_angpix 1
+    ```
+    ```bash
     # Convert .em back to .mrc for Dynamo
     e2proc3d.py --mult=-1 average_ref_001_ite_0004_sym.mrc average_ref_001_ite_0004_sym.em
     ```
@@ -217,7 +231,7 @@ layout: default
     dynamo
     ```
     ```matlab
-    dcp.new('abp_align', 'd', 'filamentsData_ctf','template','average_ref_001_ite_0004_sym.em','masks','default','t','refined_table_ref_001_ite_0004_mod.tbl');
+    dcp.new('abp_align', 'd', 'filamentsData_b8_ctf','template','average_ref_001_ite_0004_sym.em','masks','default','t','refined_table_ref_001_ite_0004_mod.tbl');
     ```
 
     Generate a new, smaller mask (see dynamo instructions above):
@@ -252,6 +266,7 @@ layout: default
 
     Now, adopt 2 references and particle sets:
     - multireferece > adaptive filtering..... > Derive a project
+    - change project name to abp_align_eo
     - multireferece > adaptive filtering > Edit for adaptive run:
 
         | Parameter    | Value      |
@@ -260,8 +275,6 @@ layout: default
         | low-pass reolution            | 25         |
         | push back     | 0          |  
 
-
-    - change project name to abp_align_eo
 
     Then check and unfold the project, and run the executable:
 
