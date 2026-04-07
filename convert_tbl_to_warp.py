@@ -17,6 +17,7 @@ if __name__ == "__main__":
     parser.add_argument('-o', required=True, metavar='OUTPUT_STAR', dest='o', help='Output STAR file name (relative to root)')
     parser.add_argument('-b', type=int, required=True, metavar='BINNING', dest='b', help='Binning factor of the reference STAR file')
     parser.add_argument('-a', type=float, required=True, metavar='ANGPIX', dest='angpix', help='Pixel size in Angstrom')
+    parser.add_argument('-tm', required=True, metavar='TABLE_MAP', dest='tm', help='Relative path to Dynamo table map .doc file (e.g. dynamo/particles_b8.reextract.doc)')
     args = parser.parse_args()
 
     tomo_root_path = args.root
@@ -39,8 +40,10 @@ if __name__ == "__main__":
     table_temp_path = os.path.join(tomo_root_path,'temp.tbl')
     np.savetxt(table_temp_path,par_table,delimiter=' ',fmt='%s')
 
-    subprocess.run(['dynamo2warp','-i',table_temp_path,'-tm',os.path.join(tomo_root_path,'dynamo/particles.reextract.doc'),
+    print("Converting Dynamo .tbl to Warp .star using dynamo2warp...")
+    subprocess.run(['dynamo2warp','-i',table_temp_path,'-tm',os.path.join(tomo_root_path, args.tm),
                     '-o', os.path.join(tomo_root_path,'temp.star')])
+    print("Conversion complete. Now processing the STAR file...")
 
     star_dyn_path = os.path.join(tomo_root_path,'temp.star')
     star_ref_path = os.path.join(tomo_root_path, args.w)
