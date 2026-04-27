@@ -96,17 +96,17 @@ Position_XX_X
 │   │   • gain-reference.mrc
 │   │
 │   └───frames # Subfolder for .tif frames
-│       │   • Position_XX_X_001_-10.00_20251212_214747_EER.tif
-│       │   • Position_XX_X_002_-7.00_20251212_214827_EER.tif
-│       │   ...
+│           • Position_XX_X_001_-10.00_20251212_214747_EER.tif
+│           • Position_XX_X_002_-7.00_20251212_214827_EER.tif
+│           ...
 │   
 └───ts-aligned # alignment and reconstruction by tomotools
-│   │   • file021.txt
-│   │   • file022.txt
+│       • file021.txt
+│       • file022.txt
 │
 └───warp # warp reconstruction
-│   │   • file021.txt
-│   │   • file022.txt
+│       • file021.txt
+│       • file022.txt
 ```
 
 ---
