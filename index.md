@@ -10,7 +10,8 @@ layout: default
 3. [Filament picking in imod](imod-picking.html)
 4. [Dynamo: initial average at bin 8](dynamo-bin8.html)
 5. [Dynamo: refinement at bin 4](dynamo-bin4.html)
-6. [Relion: refinement](relion-refine.html)
+6. [Dynamo to Relion5](dynamo-to-relion5.html)
+7. [Relion5 re-extract](relion5-reextract.html)
 
 ---
 

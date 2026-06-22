@@ -164,7 +164,7 @@ layout: default
 ---
 
 <p align="center">
-  <a href="dynamo-bin8.html">← Back</a> | <a href="relion-refine.html">Next →</a>
+  <a href="dynamo-bin8.html">← Back</a> | <a href="dynamo-to-relion5.html">Next →</a>
   <br><br>
   <a href=".">Home</a>
 </p>

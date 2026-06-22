@@ -48,7 +48,8 @@ layout: default
     --warp ../particles_dynamo_b2.star \
     --relion Extract/bin4_box$BOXSIZE/particles.star \
     --tomo Extract/bin4_box$BOXSIZE/particles_tomograms.star \
-    --out Extract/bin4_box$BOXSIZE/particles_rot90.star
+    --out Extract/bin4_box$BOXSIZE/particles_relion5_tiltprior90.star \
+    --tiltprior90
     ```
 
 4. Rescale one of the two halfmaps from dynamo bin4 to bin2.
@@ -172,7 +173,7 @@ relion_helix_toolbox --o mask.mrc --cyl_outer_diameter 200 --angpix 7.92 --boxdi
 ```
 
 <p align="center">
-  <a href="dynamo-bin4.html">← Back</a> | <a href=".">Next →</a>
+  <a href="dynamo-bin4.html">← Back</a> | <a href="relion5-reextract.html">Next →</a>
   <br><br>
   <a href=".">Home</a>
 </p>
