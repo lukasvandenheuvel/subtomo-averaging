@@ -58,7 +58,7 @@ if __name__ == "__main__":
     star_dyn_df["_rlnCoordinateY"] = star_dyn_df["_rlnCoordinateY"].astype(float)*binning
     star_dyn_df["_rlnCoordinateZ"] = star_dyn_df["_rlnCoordinateZ"].astype(float)*binning
     star_dyn_df["_rlnMicrographName"] = star_ref_df['_rlnMicrographName'].iloc[0]
-    star_dyn_df["_rlnDetectorPixelSize"] = pixel_size
+    #star_dyn_df["_rlnDetectorPixelSize"] = pixel_size
     star_dyn_df["_rlnHelicalTubeID"] = star_ref_df['_rlnHelicalTubeID'].iloc[particle_mask]
     star_dyn_df["_rlnAnglePsiFlipRatio"] = 0.5
     if '_rlnHelicalTrackLengthAngst' in star_ref_df.columns:

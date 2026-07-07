@@ -9,14 +9,33 @@ from scipy.spatial.transform import Rotation as R
 from utils import read_star, write_star
 
 
-def convert_star_to_relion5(warp_file, relion_file, tomo_file, output_file, output_file_relative):
+def convert_star_to_relion5(warp_file, relion_file, tomo_file, output_file, output_file_relative, tiltprior90=False):
     # Read star files
-    warp_header, warp_df = read_star(warp_file)
+    warp_header_list, warp_df_list = read_star(warp_file)
+    if len(warp_df_list) > 0:
+        # Find the data_particles block in the warp star file
+        warp_particles_block_idx = None
+        for _i, _h in enumerate(warp_header_list):
+            if any(l.strip().startswith('data_particles') for l in _h):
+                warp_particles_block_idx = _i
+                break
+        if warp_particles_block_idx is None:
+            warp_particles_block_idx = 0  # fall back to first block if no data_particles found
+        warp_df = warp_df_list[warp_particles_block_idx]
+    else:
+        warp_df = warp_df_list
 
     relion_header_list, relion_df_list = read_star(relion_file)
-    relion_header = relion_header_list[2] # assuming the first data_ block contains the relevant particle information
-    relion_df = relion_df_list[2] # assuming the first data_ block contains the relevant particle information
-    assert relion_header[0].startswith('data_particles'), "The second data block in the relion star file needs to contain the particle data."
+    # Find the data_particles block (its index may vary depending on how many blocks the file has)
+    particles_block_idx = None
+    for _i, _h in enumerate(relion_header_list):
+        if any(l.strip().startswith('data_particles') for l in _h):
+            particles_block_idx = _i
+            break
+    if particles_block_idx is None:
+        raise ValueError(f"No 'data_particles' block found in {relion_file}")
+    relion_header = relion_header_list[particles_block_idx]
+    relion_df = relion_df_list[particles_block_idx]
 
     tomo_header_list, tomo_df_list = read_star(tomo_file) # there are 2 data_ blocks in the tomo star file
     tomo_header = tomo_header_list[0] # assuming the first data_ block contains the relevant tomogram information
@@ -32,25 +51,33 @@ def convert_star_to_relion5(warp_file, relion_file, tomo_file, output_file, outp
 
     # assume column 1 is the “orig_filename” that embeds the particle number
     # relion_df['relion_particlenumber'] = pd.to_numeric(relion_df.iloc[:, 1], errors='coerce').astype('Int64')
-    idx = (relion_df['_rlnTomoParticleId'].astype(int) - 1).to_numpy()
+    if '_rlnTomoParticleId' in relion_df.columns:
+        idx = (relion_df['_rlnTomoParticleId'].astype(int) - 1).to_numpy()
+    else:
+        idx = np.arange(len(relion_df))
 
-    # # 1. READ ANGLES (From Relion 3D STAR)
+    # 1. READ ANGLES (From Relion 3D STAR)
     aligned_angles = relion_df[['_rlnAngleRot', '_rlnAngleTilt', '_rlnAnglePsi']].astype(float).to_numpy()
 
-    # 2. DEFINE ROTATIONS (Using Lowercase 'zyz' for Intrinsic/Relion Standard)
-    r_aligned = R.from_euler('zyz', aligned_angles, degrees=True)
-    r_prior   = R.from_euler('zyz', [0.0, 90.0, 0.0], degrees=True)
+    if tiltprior90:
+        # 2. DEFINE ROTATIONS (Using Lowercase 'zyz' for Intrinsic/Relion Standard)
+        r_aligned = R.from_euler('zyz', aligned_angles, degrees=True)
+        r_prior   = R.from_euler('zyz', [0.0, 90.0, 0.0], degrees=True)
 
-    # 3. CALCULATE SUBTOMO ANGLES
-    # Logic: The Final Alignment = Subtomo_Orientation * Prior_Offset
-    # Therefore: Subtomo_Orientation = Final_Alignment * Inverse(Prior_Offset)
-    r_subtomo = r_aligned * r_prior.inv()
+        # 3. CALCULATE SUBTOMO ANGLES
+        # Logic: The Final Alignment = Subtomo_Orientation * Prior_Offset
+        # Therefore: Subtomo_Orientation = Final_Alignment * Inverse(Prior_Offset)
+        r_subtomo = r_aligned * r_prior.inv()
 
-    # 4. EXTRACT NEW ANGLES
-    new_subtomo_angles = r_subtomo.as_euler('zyz', degrees=True)
+        # 4. EXTRACT NEW ANGLES
+        new_subtomo_angles = r_subtomo.as_euler('zyz', degrees=True)
 
-    # 5. UPDATE DATAFRAME
-    relion_df[['_rlnAngleRot', '_rlnAngleTilt', '_rlnAnglePsi']] = new_subtomo_angles
+        # 5. UPDATE DATAFRAME
+        relion_df[['_rlnAngleRot', '_rlnAngleTilt', '_rlnAnglePsi']] = new_subtomo_angles
+    else:
+        # If tiltprior90 is False, keep the original angles
+        relion_df[['_rlnAngleRot', '_rlnAngleTilt', '_rlnAnglePsi']] = aligned_angles
+
     # Rename the angle columns to match Relion 5 subtomogram naming convention
     relion_df = relion_df.rename(columns={
         '_rlnAngleRot': '_rlnTomoSubtomogramRot',
@@ -77,9 +104,12 @@ def convert_star_to_relion5(warp_file, relion_file, tomo_file, output_file, outp
         # Put the same filament coordinarte into the same group
         relion_df.loc[mask, '_rlnRandomSubset'] = float(fid) % 2 + 1
 
-    # Write the updated star file: remember there are 2 data_ blocks in the relion star file, 
-    # we need to keep the first one unchanged and only update the second one
-    write_star(output_file, relion_header_list, [relion_df_list[0],relion_df_list[1],relion_df])
+    # Write the updated star file: replace the particles block, keep all others unchanged
+    updated_dfs = [
+        relion_df if i == particles_block_idx else relion_df_list[i]
+        for i in range(len(relion_df_list))
+    ]
+    write_star(output_file, relion_header_list, updated_dfs)
     
     # Write the updated tomo star file: remember there are 2 data_ blocks in the tomo star file,
     # we need to keep the second one unchanged and only update the first one
@@ -93,17 +123,21 @@ if __name__ == '__main__':
     parser.add_argument('--relion', required=True, help='Relative path to relion5 star file')
     parser.add_argument('--tomo', required=True, help='Relative path to tomostar file')
     parser.add_argument('--out', required=True, help='Relative path to output star file')
+    parser.add_argument('--tiltprior90', action='store_true', help='Update subtomo angles by removing the 90-degree tilt prior')
     args = parser.parse_args()
 
     warp_path = os.path.join(args.relionroot, args.warp)
     relion_path = os.path.join(args.relionroot, args.relion)
     tomo_path = os.path.join(args.relionroot, args.tomo)
     tomo_out = os.path.join(args.relionroot, args.out)
-    convert_star_to_relion5(warp_path, relion_path, tomo_path, tomo_out, args.out)
+    convert_star_to_relion5(warp_path, relion_path, tomo_path, tomo_out, args.out, tiltprior90=args.tiltprior90)
 
     # write a new optimisation set star file
     opt_out = os.path.join(args.relionroot, os.path.splitext(args.out)[0]+'_optimisation_set.star')
+    tomo_star = os.path.splitext(args.out)[0] + '_tomograms.star'
     with open(opt_out, 'w') as f:
-        f.write('\ndata_\n\n')
-        f.write(f'_rlnTomoParticlesFile\t{args.out}\n')
-        f.write(f'_rlnTomoTomogramsFile\t{os.path.splitext(args.out)[0]}_tomograms.star\n')
+        f.write('\ndata_optimisation_set\n\n')
+        f.write('loop_\n')
+        f.write('_rlnTomoParticlesFile #1\n')
+        f.write('_rlnTomoTomogramsFile #2\n')
+        f.write(f'{args.out}\t{tomo_star}\n')
