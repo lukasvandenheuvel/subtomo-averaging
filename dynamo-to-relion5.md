@@ -45,10 +45,11 @@ layout: default
     cd $REPOSITORY
     python warp_to_relion5.py \
     --relionroot $ROOT/warp/relion5_b4 \
-    --warp ../particles_dynamo_b2.star \
-    --relion Extract/bin4_box$BOXSIZE/particles.star \
+    --prestar ../particles_dynamo_b2.star \
+    --poststar Extract/bin4_box$BOXSIZE/particles.star \
     --tomo Extract/bin4_box$BOXSIZE/particles_tomograms.star \
     --out Extract/bin4_box$BOXSIZE/particles_relion5_tiltprior90.star \
+    --bin 4 \
     --tiltprior90
     ```
 

@@ -30,7 +30,7 @@ First, we found it useful to generate seperate folders for each position, and mo
   ```
   For each position you want to analyse, e.g. ```Position_2_3```, run this bash script:
   ```shell
-  bash move_eer_frames.sh 2_3
+  ./move_eer_frames.sh 2_3
   ```
 
   ## Data organisation
