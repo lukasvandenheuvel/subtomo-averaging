@@ -5,8 +5,9 @@ layout: default
 # Installation
 Below are the software used in this tutorial.
 
-## Conda environment:
+## Conda environments:
 - tomotools (https://github.com/tomotools/tomotools) 
+- miss-alignment (https://github.com/warpem/miss-alignment/)
 
 ## Cryo-EM and STA software – managed through SBGrid.
 We managed all below softare through  SBGrid (see documentation [here](https://sbgrid.org/software/access-software/)).
