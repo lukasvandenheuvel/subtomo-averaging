@@ -33,3 +33,86 @@
   }
 </style>
 <script src="{{ '/assets/js/copy-code.js' | relative_url }}" defer></script>
+
+<style>
+  /* Sidebar layout */
+  .content-wrapper {
+    display: flex;
+    align-items: flex-start;
+  }
+
+  .sidebar {
+    width: 220px;
+    min-width: 220px;
+    padding: 1.5rem 1rem 1.5rem 1.5rem;
+    background: #f4f6f8;
+    border-right: 1px solid #dce6f0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+    font-size: 0.88rem;
+    font-family: "Open Sans", sans-serif;
+  }
+
+  .sidebar .sidebar-home {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 0.85rem;
+    color: #157878;
+    text-decoration: none;
+  }
+
+  .sidebar .sidebar-home:hover {
+    text-decoration: underline;
+  }
+
+  .sidebar ol {
+    padding-left: 1.2rem;
+    margin: 0;
+  }
+
+  .sidebar ol li {
+    margin-bottom: 0.45rem;
+    line-height: 1.35;
+  }
+
+  .sidebar ol li a {
+    text-decoration: none;
+    color: #606c71;
+  }
+
+  .sidebar ol li a:hover {
+    color: #157878;
+  }
+
+  .sidebar ol li a.active {
+    color: #157878;
+    font-weight: 700;
+  }
+
+  /* Let main-content fill the remaining space */
+  @media screen and (min-width: 64em) {
+    .main-content {
+      max-width: none;
+      margin: 0;
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
+  /* On small screens, stack sidebar above content */
+  @media screen and (max-width: 42em) {
+    .content-wrapper {
+      flex-direction: column;
+    }
+    .sidebar {
+      width: 100%;
+      height: auto;
+      position: static;
+      border-right: none;
+      border-bottom: 1px solid #dce6f0;
+    }
+  }
+</style>

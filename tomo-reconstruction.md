@@ -154,9 +154,10 @@ We have found the recently developed [MissAlign](https://github.com/warpem/miss-
     ```bash
     cp Position_XX_X_ali.xml ../Position_XX_X/warp/processing
     ```
-    
-15. Reconstruct the tomogram again with WarpTools, now without first importing the alignments or doing CTF correction:
+
+15. Reconstruct the tomogram again with WarpTools, now without first importing the alignments:
     ```bash
+    cd $ROOT/warp
     WarpTools ts_defocus_hand --settings warp_tiltseries.settings --set_auto
     WarpTools ts_ctf --settings warp_tiltseries.settings --defocus_max 8 --range_high 4
     WarpTools ts_reconstruct --settings warp_tiltseries.settings --angpix $ANGPIX_REC --dont_invert --deconv
