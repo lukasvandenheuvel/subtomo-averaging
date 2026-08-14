@@ -109,9 +109,9 @@ def edit_dynamo_tbl(dynamo_output, merged_star_file, min_tilt, max_tilt):
             continue
         
         # Edit specific columns (1-indexed -> 0-indexed)
-        values[12] = '1'  # Column 13
-        values[13] = str(min_tilt)  # Column 14
-        values[14] = str(max_tilt)  # Column 15
+        values[12] = '2'  # Column 13
+        values[15] = str(-max_tilt)  # Column 16
+        values[16] = str(-min_tilt)  # Column 17
         values[19] = '1'  # Column 20
         
         # Column 23: HelicalTubeID from merged star file
@@ -129,9 +129,9 @@ def edit_dynamo_tbl(dynamo_output, merged_star_file, min_tilt, max_tilt):
         f.writelines(output_lines)
     
     print(f"Modified {particle_idx} particles")
-    print(f"  Column 13: set to 1")
-    print(f"  Column 14: set to {min_tilt}")
-    print(f"  Column 15: set to {max_tilt}")
+    print(f"  Column 13: set to 2")
+    print(f"  Column 16: set to {-max_tilt}")
+    print(f"  Column 17: set to {-min_tilt}")
     print(f"  Column 20: set to 1")
     print(f"  Column 23: set to _rlnHelicalTubeID from merged star file")
     print(f"Output written to: {output_tbl_file}")

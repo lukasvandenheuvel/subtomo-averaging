@@ -2,9 +2,9 @@
 
 ### PARAMETERS ###
 
-TOMONAME=Position_70
-#ROOT=/mnt/storage/data/users/lukas/20251127_MSA_liftout/Session1/msa_human/20251127_lift_out/$TOMONAME
-ROOT=/mnt/storage/data/users/lukas/20251127_MSA_liftout/Session2/Titan3_EPFL_LBEM_Lukas2_20251210/msa_human/20251127_lift_out/$TOMONAME
+TOMONAME=Position_60_3
+ROOT=/mnt/storage/data/users/lukas/20251127_MSA_liftout/Session1/msa_human/20251127_lift_out/$TOMONAME
+#ROOT=/mnt/storage/data/users/lukas/20251127_MSA_liftout/Session2/Titan3_EPFL_LBEM_Lukas2_20251210/msa_human/20251127_lift_out/$TOMONAME
 REPOSITORY=/mnt/storage/data/users/lukas/subtomo-averaging
 ANGPIX=1.98             # pixel size in Angs. Make sure it is a float, e.g. 2.00 (not 2)
 MAGNIFICATION=64000     # nominal magnification
@@ -14,7 +14,7 @@ BOXSIZE=64              # box size for inital subtomogram extraction (in pixels)
 TOMOSIZEX=4096          # pixels
 TOMOSIZEY=4096          # pixels
 TOMOSIZEZ=3000          # pixels
-MOTIONCOR_EXECUTABLE=/programs/x86_64-linux/system/sbgrid_bin/MotionCor2_1.6.4_Cuda112_Mar312023
+MOTIONCOR_EXECUTABLE=/programs/x86_64-linux/system/sbgrid_bin/MotionCor2_1.6.4_Cuda112_Mar31cd w    2023
 
 ### END PARAMETERS ###
 
